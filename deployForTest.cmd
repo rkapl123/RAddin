@@ -5,5 +5,6 @@ set source=bin\Release
 )
 copy /Y %source%\Raddin-AddIn-packed.xll "%appdata%\Microsoft\AddIns"
 copy /Y %source%\Raddin.pdb "%appdata%\Microsoft\AddIns"
+copy /Y %source%\Raddin.dll.config "%appdata%\Microsoft\AddIns\Raddin-AddIn-packed.xll.config"
 pause
 

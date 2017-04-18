@@ -2,6 +2,7 @@
 Imports ExcelDna.Integration
 Imports System.IO
 Imports System.Runtime.InteropServices
+Imports System.Configuration
 Imports ExcelDna.Integration.CustomUI
 
 Public Module MyFunctions
@@ -10,10 +11,10 @@ Public Module MyFunctions
     Public Rcalldefnames As String() = {}
     Public Rcalldefs As Range() = {}
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
+    Public rexec As String
 
     Dim scripts As String() = {}
     Dim scriptspaths As String() = {}
-    Dim rexec As String
     Dim dirglobal As String
     Dim args As String() = {}
     Dim argspaths As String() = {}
@@ -235,7 +236,7 @@ Public Module MyFunctions
                 Rcalldefs(Rcalldefs.Length - 1) = namedrange.RefersToRange
             End If
         Next
-        If UBound(Rcalldefnames) = 0 Then Return "no definitions"
+        If UBound(Rcalldefnames) = -1 Then Return "no definitions"
         Return vbNullString
     End Function
 
@@ -300,6 +301,11 @@ Public Class AddIn
     ' connect to Excel when opening Addin
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
+        Try
+            MyFunctions.rexec = ConfigurationManager.AppSettings("RscriptPath").ToString()
+        Catch ex As Exception
+            MsgBox("Error when retrieving settings: " + ex.Message)
+        End Try
     End Sub
 
     'has to be implemented
@@ -307,7 +313,7 @@ Public Class AddIn
     End Sub
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
-        If UBound(Rcalldefnames) = 0 Or IsNothing(MyFunctions.Rdefinitions) Then Exit Sub
+        If UBound(Rcalldefnames) = -1 Or IsNothing(MyFunctions.Rdefinitions) Then Exit Sub
         currWb = Wb
         ' get the definition range
         Dim errStr As String
@@ -324,7 +330,7 @@ Public Class AddIn
         ' get the definition range
         Dim errStr As String
         errStr = getRNames()
-        If errStr = "no Rdefinitions" Then Exit Sub
+        If errStr = "no definitions" Then Exit Sub
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
@@ -336,7 +342,7 @@ Public Class AddIn
         ' get the definition range
         Dim errStr As String
         errStr = getRNames()
-        If errStr = "no Rdefinitions" Then Exit Sub
+        If errStr = "no definitions" Then Exit Sub
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
@@ -351,7 +357,7 @@ Public Class MyRibbon
 
     Public Sub startRprocess(control As ExcelDna.Integration.CustomUI.IRibbonControl)
         Dim errStr As String
-        If UBound(Rcalldefnames) = 0 Then
+        If UBound(Rcalldefnames) = -1 Then
             MsgBox("no Rdefinitions found for R_Addin (3 column named range (type/value/path), minimum types: rexec and script)!")
             Exit Sub
         End If
