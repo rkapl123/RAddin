@@ -224,11 +224,12 @@ Public Module MyFunctions
         For Each namedrange As Name In currWb.Names
             Dim cleanname As String = Replace(namedrange.Name, namedrange.Parent.Name & "!", "")
             If Left(cleanname, 7) = "R_Addin" Then
-                Dim finalname As String = Replace(cleanname, "R_Addin", "")
+                ' final name of entry is without R_Addin and !
+                Dim finalname As String = Replace(Replace(namedrange.Name, "R_Addin", ""), "!", "")
                 ' first workbook level definition as standard definition
-                If IsNothing(Rdefinitions) And Not InStr(namedrange.Name, "!") > 0 Then Rdefinitions = namedrange.RefersToRange
-                If Len(finalname) = 0 Then
-                    finalname = namedrange.Parent.Name
+                If Not InStr(namedrange.Name, "!") > 0 Then
+                    finalname = currWb.Name + finalname
+                    If IsNothing(Rdefinitions) Then Rdefinitions = namedrange.RefersToRange
                 End If
                 ReDim Preserve Rcalldefnames(Rcalldefnames.Length)
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
@@ -370,7 +371,7 @@ Public Class MyRibbon
     End Sub
 
     Public Function GetItemCount(control As ExcelDna.Integration.CustomUI.IRibbonControl) As Integer
-        Return MyFunctions.Rcalldefnames.Length
+        Return(MyFunctions.Rcalldefnames.Length)
     End Function
 
     Public Function GetItemLabel(control As ExcelDna.Integration.CustomUI.IRibbonControl, index As Integer) As String

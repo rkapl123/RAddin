@@ -24,7 +24,7 @@
         <tabs>
           <tab id='CustomTab' label='R Addin'>
             <group id='UploadGroup' label='R Scripts'>
-              <dropDown id='scriptDropDown' label ='Rdefinition:' getItemCount='GetItemCount'  getItemID='GetItemID'  getItemLabel='GetItemLabel' onAction='selectItem'/>
+              <dropDown id='scriptDropDown' label ='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount'  getItemID='GetItemID'  getItemLabel='GetItemLabel' onAction='selectItem' />
               <button id='Button1' label='run this Rdefinition' image='M' size='normal' onAction='startRprocess' tag='1' screentip="run R script from dropdown" supertip="runs R script defined in range R_Addin" />
             </group >
           </tab>
