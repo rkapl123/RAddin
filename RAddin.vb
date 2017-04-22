@@ -12,37 +12,86 @@ Public Module MyFunctions
     Public Rcalldefs As Range() = {}
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
     Public rexec As String
-
-    Dim scripts As String() = {}
-    Dim scriptspaths As String() = {}
     Dim dirglobal As String
-    Dim args As String() = {}
-    Dim argspaths As String() = {}
-    Dim results As String() = {}
-    Dim resultspaths As String() = {}
-    Dim diags As String() = {}
-    Dim diagspaths As String() = {}
+
+    ' definitions of current R invocation (scripts, args, results, diags...)
+    Dim RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
+
+    ' prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags
+    Function prepareParams(c As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
+        Dim value As String = RdefDic(name)(c)
+        ' only for args, results and diags (scripts dont have a target range)
+        If name = "args" Or name = "results" Or name = "diags" Then
+            Try
+                RDataRange = currWb.Names.Item(value).RefersToRange
+            Catch ex As Exception
+                Return "Error occured when looking up " + name + " range '" + value + "', " + ex.Message
+            End Try
+        End If
+        ' if argvalue refers to a WS Name, cut off WS name prefix for R file name...
+        Dim posWSseparator = InStr(value, "!")
+        If posWSseparator > 0 Then
+            value = value.Substring(posWSseparator)
+        End If
+        If Len(RdefDic(name + "paths")(c)) > 0 Then
+            returnPath = RdefDic(name + "paths")(c)
+        End If
+        returnName = value + ext
+        Return vbNullString
+    End Function
+
+    ' invokes current scripts/args/results definition
+    Public Function invokeScripts() As String
+        Dim script As String = vbNullString
+        Dim scriptpath As String
+        Dim errMsg As String = vbNullString
+
+        scriptpath = dirglobal
+        For c As Integer = 0 To RdefDic("scripts").Length - 1
+            errMsg = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
+            If Len(errMsg) > 0 Then Exit For
+
+            Dim fullScriptPath = currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString)
+            If Not File.Exists(fullScriptPath + "\" + script) Then
+                Return "Script '" + fullScriptPath + "\" + script + "' not found!"
+            End If
+            If Not File.Exists(rexec) Then
+                Return "Executable '" + rexec + "' not found!"
+            End If
+            Try
+                Dim cmd As Process
+                cmd = New Process()
+                cmd.StartInfo.FileName = rexec
+                cmd.StartInfo.Arguments = script
+                cmd.StartInfo.RedirectStandardInput = False
+                cmd.StartInfo.RedirectStandardOutput = False
+                cmd.StartInfo.CreateNoWindow = False
+                cmd.StartInfo.UseShellExecute = False
+                cmd.StartInfo.WorkingDirectory = fullScriptPath
+                'cmd.Start()
+                'cmd.WaitForExit()
+            Catch ex As Exception
+                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message
+            End Try
+        Next
+        Return errMsg
+    End Function
 
     ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd"
     ' otherwise:  "what you see is what you get"
-    Public Function storeInput() As String
-        Dim argFilename As String = vbNullString, writedir As String, RDataRange As Range
+    Public Function storeArgs() As String
+        Dim argFilename As String = vbNullString, argdir As String
+        Dim RDataRange As Range = Nothing
         Dim outputFile As StreamWriter = Nothing
         Dim errMsg As String = vbNullString
 
-        writedir = dirglobal
-        For c As Integer = 0 To args.Length - 1
+        argdir = dirglobal
+        For c As Integer = 0 To RdefDic("args").Length - 1
             Try
-                Dim argvalue As String
-                argvalue = args(c)
-                If Len(argspaths(c)) > 0 Then writedir = argspaths(c)
-                argFilename = argvalue + ".txt"
-                Try
-                    RDataRange = currWb.Names.Item(argvalue).RefersToRange
-                Catch ex As Exception
-                    Return "Error occured when looking up arg range '" + argvalue + "', " + ex.Message
-                End Try
-                outputFile = New StreamWriter(currWb.Path + "\" + writedir + "\" + argFilename)
+                errMsg = prepareParams(c, "args", RDataRange, argFilename, argdir, ".txt")
+                If Len(errMsg) > 0 Then Exit For
+
+                outputFile = New StreamWriter(currWb.Path + "\" + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
                 customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
@@ -74,52 +123,23 @@ Public Module MyFunctions
             Catch ex As Exception
                 errMsg = "Error occured when creating inputfile '" + argFilename + "', " + ex.Message
             Finally
-                If Not IsNothing(outputFile) Then outputFile.Close()
+                If outputFile IsNot Nothing Then outputFile.Close()
             End Try
         Next
         Return errMsg
     End Function
 
-    Public Function invokeScripts() As String
-        Dim script As String
-        Dim scriptpath As String
+    ' get Outputfiles for defined results ranges, tab separated
+    ' otherwise:  "what you see is what you get"
+    Public Function getResults() As String
+        Dim resFilename As String = vbNullString, readdir As String
+        Dim RDataRange As Range = Nothing
+        Dim errMsg As String = vbNullString
 
-        scriptpath = dirglobal
-        For c As Integer = 0 To scripts.Length - 1
-            script = scripts(c)
-            If Len(scriptspaths(c)) > 0 Then scriptpath = scriptspaths(c)
-            Try
-                Dim cmd As Process
-                cmd = New Process()
-                cmd.StartInfo.FileName = rexec
-                cmd.StartInfo.Arguments = script
-                cmd.StartInfo.RedirectStandardInput = False
-                cmd.StartInfo.RedirectStandardOutput = False
-                cmd.StartInfo.CreateNoWindow = False
-                cmd.StartInfo.UseShellExecute = False
-                cmd.StartInfo.WorkingDirectory = currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString)
-                cmd.Start()
-                cmd.WaitForExit()
-            Catch ex As Exception
-                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message
-            End Try
-        Next
-        Return vbNullString
-    End Function
-
-    Public Function getOutput() As String
-        Dim resFilename As String, readdir As String, RDataRange As Range
         readdir = dirglobal
-        For c As Integer = 0 To results.Length - 1
-            Dim resvalue As String
-            resvalue = results(c)
-            If resultspaths(c) <> vbNullString Then readdir = resultspaths(c)
-            resFilename = resvalue + ".txt"
-            Try
-                RDataRange = currWb.Names.Item(resvalue).RefersToRange
-            Catch ex As Exception
-                Return "Error occured when looking up result range '" + resvalue + "', " + ex.Message
-            End Try
+        For c As Integer = 0 To RdefDic("results").Length - 1
+            errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
+            If Len(errMsg) > 0 Then Exit For
 
             Dim afile As StreamReader = Nothing
             Try
@@ -138,6 +158,7 @@ Public Module MyFunctions
                     afile.Close()
                     Return "Error occured when parsing file '" + resFilename + "', " + ex.Message
                 End Try
+                RDataRange.Clear()
                 ' Put parsed data into target range column by column
                 For j = 1 To currentRecord.Count()
                     RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
@@ -145,74 +166,58 @@ Public Module MyFunctions
                 i = i + 1
             Loop
         Next
-        Return vbNullString
+        Return errMsg
     End Function
 
-    Public Function getOutDiagrams() As String
-        Dim diagFilename As String, readdir As String, RDataRange As Range
+    ' get Output diagrams (png) for defined diags ranges
+    Public Function getDiags() As String
+        Dim diagFilename As String = vbNullString, readdir As String
+        Dim RDataRange As Range = Nothing
+        Dim errMsg As String = vbNullString
 
         readdir = dirglobal
-
-        For c As Integer = 0 To diags.Length - 1
-            Dim diagvalue As String
-            diagvalue = diags(c)
-            If diagspaths(c) <> vbNullString Then readdir = diagspaths(c)
-            diagFilename = diagvalue + ".png"
+        For c As Integer = 0 To RdefDic("diags").Length - 1
+            errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
+            If Len(errMsg) > 0 Then Exit For
+            ' clean previously set shapes...
+            For Each oldShape As Shape In RDataRange.Worksheet.Shapes
+                If oldShape.TopLeftCell.Address = RDataRange.Address Then
+                    oldShape.Delete()
+                    Exit For
+                End If
+            Next
+            ' add new shape from picture
             Try
-                RDataRange = currWb.Names.Item(diagvalue).RefersToRange
+                RDataRange.Worksheet.Shapes.AddPicture( _
+                    Filename:=currWb.Path + "\" + readdir + "\" + diagFilename, _
+                    LinkToFile:=False, SaveWithDocument:=True, Left:=RDataRange.Left, Top:=RDataRange.Top, Width:=-1, Height:=-1)
             Catch ex As Exception
-                Return "Error occured when looking up diagram target range '" + diagvalue + "', " + ex.Message
-            End Try
-
-            Try
-                With RDataRange.Parent.Pictures.Insert(Filename:=currWb.Path + "\" + readdir + "\" + diagFilename, LinkToFile:=False, SaveWithDocument:=True)
-                    .Left = RDataRange.Left
-                    .Top = RDataRange.Top
-                    .Placement = 1
-                    .PrintObject = True
-                End With
-            Catch ex As Exception
-                Return "Error occured when placing the diagram into target range '" + diagvalue + "', " + ex.Message
+                Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
             End Try
         Next
-        Return vbNullString
+            Return errMsg
     End Function
 
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    ' accessible from VBA (via Application.Run)
+    ' startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     Public Function startRprocess() As String
         Dim errStr As String
         ' get the definition range
         errStr = getRDefinitions()
-        If errStr <> vbNullString Then
-            Return "Failed getting Rdefinitions: " + errStr
-        End If
-
+        If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
         ' store input files from arg(ument) ranges
-        errStr = storeInput()
-        If errStr <> vbNullString Then
-            Return "storing input files returned error: " + errStr
-        End If
-
+        errStr = storeArgs()
+        If errStr <> vbNullString Then Return "storing input files returned error: " + errStr
         ' invoke r script(s)
         errStr = invokeScripts()
-        If errStr <> vbNullString Then
-            Return "invoking scripts returned error: " + errStr
-        End If
-
+        If errStr <> vbNullString Then Return "invoking scripts returned error: " + errStr
         ' get and write output files into res(ult) ranges
-        errStr = getOutput()
-        If errStr <> vbNullString Then
-            Return "fetching/placing result files/content returned error: " + errStr
-        End If
-
+        errStr = getResults()
+        If errStr <> vbNullString Then Return "fetching/placing result files/content returned error: " + errStr
         ' get and put result diagrams/pictures into dia(gram) ranges
-        errStr = getOutDiagrams()
-        If errStr <> vbNullString Then
-            Return "fetching/placing result diagrams returned error: " + errStr
-        End If
-
+        errStr = getDiags()
+        If errStr <> vbNullString Then Return "fetching/placing result diagrams returned error: " + errStr
         ' all ís OK = return nullstring
         Return vbNullString
     End Function
@@ -229,7 +234,7 @@ Public Module MyFunctions
                 ' first workbook level definition as standard definition
                 If Not InStr(namedrange.Name, "!") > 0 Then
                     finalname = currWb.Name + finalname
-                    If IsNothing(Rdefinitions) Then Rdefinitions = namedrange.RefersToRange
+                    If Rdefinitions Is Nothing Then Rdefinitions = namedrange.RefersToRange
                 End If
                 ReDim Preserve Rcalldefnames(Rcalldefnames.Length)
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
@@ -241,17 +246,17 @@ Public Module MyFunctions
         Return vbNullString
     End Function
 
-    ' gets definitions from  R script invocation ranges in the current workbook
+    ' gets definitions from  current selected R script invocation range (Rdefintions)
     Function getRDefinitions() As String
         Try
-            ReDim Preserve args(-1)
-            ReDim Preserve argspaths(-1)
-            ReDim Preserve results(-1)
-            ReDim Preserve resultspaths(-1)
-            ReDim Preserve diags(-1)
-            ReDim Preserve diagspaths(-1)
-            ReDim Preserve scripts(-1)
-            ReDim Preserve scriptspaths(-1)
+            RdefDic("args") = {}
+            RdefDic("argspaths") = {}
+            RdefDic("results") = {}
+            RdefDic("resultspaths") = {}
+            RdefDic("diags") = {}
+            RdefDic("diagspaths") = {}
+            RdefDic("scripts") = {}
+            RdefDic("scriptspaths") = {}
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
@@ -260,31 +265,31 @@ Public Module MyFunctions
                 If deftype = "rexec" Then
                     rexec = defval
                 ElseIf deftype = "arg" Then
-                    ReDim Preserve args(args.Length)
-                    args(args.Length - 1) = defval
-                    ReDim Preserve argspaths(argspaths.Length)
-                    argspaths(argspaths.Length - 1) = deffilepath
+                    ReDim Preserve RdefDic("args")(RdefDic("args").Length)
+                    RdefDic("args")(RdefDic("args").Length - 1) = defval
+                    ReDim Preserve RdefDic("argspaths")(RdefDic("argspaths").Length)
+                    RdefDic("argspaths")(RdefDic("argspaths").Length - 1) = deffilepath
                 ElseIf deftype = "res" Then
-                    ReDim Preserve results(results.Length)
-                    results(results.Length - 1) = defval
-                    ReDim Preserve resultspaths(resultspaths.Length)
-                    resultspaths(resultspaths.Length - 1) = deffilepath
+                    ReDim Preserve RdefDic("results")(RdefDic("results").Length)
+                    RdefDic("results")(RdefDic("results").Length - 1) = defval
+                    ReDim Preserve RdefDic("resultspaths")(RdefDic("resultspaths").Length)
+                    RdefDic("resultspaths")(RdefDic("resultspaths").Length - 1) = deffilepath
                 ElseIf deftype = "diag" Then
-                    ReDim Preserve diags(diags.Length)
-                    diags(diags.Length - 1) = defval
-                    ReDim Preserve diagspaths(diagspaths.Length)
-                    diagspaths(diagspaths.Length - 1) = deffilepath
+                    ReDim Preserve RdefDic("diags")(RdefDic("diags").Length)
+                    RdefDic("diags")(RdefDic("diags").Length - 1) = defval
+                    ReDim Preserve RdefDic("diagspaths")(RdefDic("diagspaths").Length)
+                    RdefDic("diagspaths")(RdefDic("diagspaths").Length - 1) = deffilepath
                 ElseIf deftype = "script" Then
-                    ReDim Preserve scripts(scripts.Length)
-                    scripts(scripts.Length - 1) = defval
-                    ReDim Preserve scriptspaths(scriptspaths.Length)
-                    scriptspaths(scriptspaths.Length - 1) = deffilepath
+                    ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
+                    RdefDic("scripts")(RdefDic("scripts").Length - 1) = defval
+                    ReDim Preserve RdefDic("scriptspaths")(RdefDic("scriptspaths").Length)
+                    RdefDic("scriptspaths")(RdefDic("scriptspaths").Length - 1) = deffilepath
                 ElseIf deftype = "dir" Then
                     dirglobal = defval
                 End If
             Next
             If rexec = "" Then Return "Error in getRDefinitions: no rexec defined"
-            If scripts.Count = 0 Then Return "Error in getRDefinitions: no script(s) defined"
+            If RdefDic("scripts").Count = 0 Then Return "Error in getRDefinitions: no script(s) defined"
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message
         End Try
@@ -314,7 +319,7 @@ Public Class AddIn
     End Sub
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
-        If UBound(Rcalldefnames) = -1 Or IsNothing(MyFunctions.Rdefinitions) Then Exit Sub
+        If UBound(Rcalldefnames) = -1 Or MyFunctions.Rdefinitions Is Nothing Then Exit Sub
         currWb = Wb
         ' get the definition range
         Dim errStr As String
@@ -322,7 +327,7 @@ Public Class AddIn
         errStr = getRDefinitions()
         If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
 
-        errStr = storeInput()
+        errStr = storeArgs()
         If errStr <> "" Then MsgBox("Error when saving inputfiles: " + errStr)
     End Sub
 
@@ -362,7 +367,7 @@ Public Class MyRibbon
             MsgBox("no Rdefinitions found for R_Addin (3 column named range (type/value/path), minimum types: rexec and script)!")
             Exit Sub
         End If
-        If IsNothing(MyFunctions.Rdefinitions) Then
+        If MyFunctions.Rdefinitions Is Nothing Then
             MsgBox("no Rdefinition selected for starting R script!")
             Exit Sub
         End If

@@ -3,6 +3,7 @@ script.name <- sub("--file=", "", initial.options[grep("--file=", initial.option
 script.basename <- dirname(script.name)
 rawdataFilename<-"test_in.txt"
 setwd(script.basename)
+print(script.basename)
 
 rawdata <-as.matrix(read.csv2(rawdataFilename,sep="\t",header=FALSE))
 mode(rawdata) <-"numeric"
