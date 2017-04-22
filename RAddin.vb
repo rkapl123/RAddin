@@ -68,8 +68,8 @@ Public Module MyFunctions
                 cmd.StartInfo.CreateNoWindow = False
                 cmd.StartInfo.UseShellExecute = False
                 cmd.StartInfo.WorkingDirectory = fullScriptPath
-                'cmd.Start()
-                'cmd.WaitForExit()
+                cmd.Start()
+                cmd.WaitForExit()
             Catch ex As Exception
                 Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message
             End Try
@@ -150,6 +150,7 @@ Public Module MyFunctions
 
             ' parse the actual file line by line
             Dim i As Integer = 1, currentRecord As String(), currentLine As String
+            RDataRange.Clear()
             Do While Not afile.EndOfStream
                 Try
                     currentLine = afile.ReadLine
@@ -158,7 +159,6 @@ Public Module MyFunctions
                     afile.Close()
                     Return "Error occured when parsing file '" + resFilename + "', " + ex.Message
                 End Try
-                RDataRange.Clear()
                 ' Put parsed data into target range column by column
                 For j = 1 To currentRecord.Count()
                     RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
