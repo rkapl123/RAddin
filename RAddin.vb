@@ -51,7 +51,9 @@ Public Module MyFunctions
             errMsg = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
             If Len(errMsg) > 0 Then Exit For
 
-            Dim fullScriptPath = currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString)
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
+            Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
+            Dim fullScriptPath = curWbPrefix + scriptpath
             If Not File.Exists(fullScriptPath + "\" + script) Then
                 Return "Script '" + fullScriptPath + "\" + script + "' not found!"
             End If
@@ -91,7 +93,9 @@ Public Module MyFunctions
                 errMsg = prepareParams(c, "args", RDataRange, argFilename, argdir, ".txt")
                 If Len(errMsg) > 0 Then Exit For
 
-                outputFile = New StreamWriter(currWb.Path + "\" + argdir + "\" + argFilename)
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+                Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
+                outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
                 customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
@@ -140,10 +144,11 @@ Public Module MyFunctions
         For c As Integer = 0 To RdefDic("results").Length - 1
             errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
             If Len(errMsg) > 0 Then Exit For
-
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             Dim afile As StreamReader = Nothing
             Try
-                afile = New StreamReader(currWb.Path + "\" + readdir + "\" + resFilename)
+                afile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
             Catch ex As Exception
                 Return "Error occured when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message
             End Try
@@ -187,9 +192,11 @@ Public Module MyFunctions
                 End If
             Next
             ' add new shape from picture
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             Try
                 RDataRange.Worksheet.Shapes.AddPicture( _
-                    Filename:=currWb.Path + "\" + readdir + "\" + diagFilename, _
+                    Filename:=curWbPrefix + readdir + "\" + diagFilename, _
                     LinkToFile:=False, SaveWithDocument:=True, Left:=RDataRange.Left, Top:=RDataRange.Top, Width:=-1, Height:=-1)
             Catch ex As Exception
                 Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
