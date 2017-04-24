@@ -57,18 +57,18 @@ Public Module MyFunctions
             If Not File.Exists(fullScriptPath + "\" + script) Then
                 Return "Script '" + fullScriptPath + "\" + script + "' not found!"
             End If
-            If Not File.Exists(rexec) Then
+            If Not File.Exists(rexec) And rexec <> "cmd" Then
                 Return "Executable '" + rexec + "' not found!"
             End If
             Try
                 Dim cmd As Process
                 cmd = New Process()
-                cmd.StartInfo.FileName = rexec
-                cmd.StartInfo.Arguments = script
+                cmd.StartInfo.FileName = IIf(rexec = "cmd", script, rexec)
+                cmd.StartInfo.Arguments = IIf(rexec = "cmd", "", script)
                 cmd.StartInfo.RedirectStandardInput = False
                 cmd.StartInfo.RedirectStandardOutput = False
                 cmd.StartInfo.CreateNoWindow = False
-                cmd.StartInfo.UseShellExecute = False
+                cmd.StartInfo.UseShellExecute = (rexec = "cmd")
                 cmd.StartInfo.WorkingDirectory = fullScriptPath
                 cmd.Start()
                 cmd.WaitForExit()
@@ -79,7 +79,7 @@ Public Module MyFunctions
         Return errMsg
     End Function
 
-    ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd"
+    ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd" 
     ' otherwise:  "what you see is what you get"
     Public Function storeArgs() As String
         Dim argFilename As String = vbNullString, argdir As String
@@ -95,6 +95,11 @@ Public Module MyFunctions
 
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
                 Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' remove any existing input files...
+                If File.Exists(curWbPrefix + argdir + "\" + argFilename) Then
+                    File.Delete(curWbPrefix + argdir + "\" + argFilename)
+                End If
+
                 outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
@@ -202,8 +207,41 @@ Public Module MyFunctions
                 Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
             End Try
         Next
-            Return errMsg
+        Return errMsg
     End Function
+
+    ' remove result and diagram files from arg(ument) ranges
+    Public Function removeResultsAndDiags() As String
+        Dim resFilename As String = vbNullString, diagFilename As String = vbNullString, readdir As String
+        Dim RDataRange As Range = Nothing
+        Dim errMsg As String = vbNullString
+
+        readdir = dirglobal
+        For c As Integer = 0 To RdefDic("results").Length - 1
+            errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
+            If Len(errMsg) > 0 Then Exit For
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' remove any existing result files...
+            If File.Exists(curWbPrefix + readdir + "\" + resFilename) Then
+                File.Delete(curWbPrefix + readdir + "\" + resFilename)
+            End If
+        Next
+        For c As Integer = 0 To RdefDic("diags").Length - 1
+            errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
+            If Len(errMsg) > 0 Then Exit For
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' remove any existing diagram files...
+            If File.Exists(curWbPrefix + readdir + "\" + diagFilename) Then
+                File.Delete(curWbPrefix + readdir + "\" + diagFilename)
+            End If
+        Next
+        Return errMsg
+    End Function
+
 
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     ' startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)
@@ -213,6 +251,9 @@ Public Module MyFunctions
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
+        ' remove result and diagram files from arg(ument) ranges
+        errStr = removeResultsAndDiags()
+        If errStr <> vbNullString Then Return "removing  result and diagram files returned error: " + errStr
         ' store input files from arg(ument) ranges
         errStr = storeArgs()
         If errStr <> vbNullString Then Return "storing input files returned error: " + errStr
@@ -229,19 +270,20 @@ Public Module MyFunctions
         Return vbNullString
     End Function
 
-    ' gets defined named ranges for R script invocation in the current workbook
+    ' gets defined named ranges for R script invocation in the current workbook 
     Function getRNames() As String
         ReDim Preserve Rcalldefnames(-1)
         ReDim Preserve Rcalldefs(-1)
         For Each namedrange As Name In currWb.Names
             Dim cleanname As String = Replace(namedrange.Name, namedrange.Parent.Name & "!", "")
             If Left(cleanname, 7) = "R_Addin" Then
+                If namedrange.RefersToRange.Columns.Count <> 3 Then Return "Rdefinitions range " + namedrange.Parent.name + "!" + namedrange.Name + " doesn't have 3 columns !"
                 ' final name of entry is without R_Addin and !
                 Dim finalname As String = Replace(Replace(namedrange.Name, "R_Addin", ""), "!", "")
-                ' first workbook level definition as standard definition
+                ' first definition as standard definition (works without selecting a Rdefinition)
+                If Rdefinitions Is Nothing Then Rdefinitions = namedrange.RefersToRange
                 If Not InStr(namedrange.Name, "!") > 0 Then
                     finalname = currWb.Name + finalname
-                    If Rdefinitions Is Nothing Then Rdefinitions = namedrange.RefersToRange
                 End If
                 ReDim Preserve Rcalldefnames(Rcalldefnames.Length)
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
@@ -314,11 +356,6 @@ Public Class AddIn
     ' connect to Excel when opening Addin
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
-        Try
-            MyFunctions.rexec = ConfigurationManager.AppSettings("RscriptPath").ToString()
-        Catch ex As Exception
-            MsgBox("Error when retrieving settings: " + ex.Message)
-        End Try
     End Sub
 
     'has to be implemented
@@ -327,38 +364,55 @@ Public Class AddIn
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
         If UBound(Rcalldefnames) = -1 Or MyFunctions.Rdefinitions Is Nothing Then Exit Sub
+        ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
+        Try
+            MyFunctions.rexec = ConfigurationManager.AppSettings("ExePath").ToString()
+        Catch ex As Exception
+            MsgBox("Error when retrieving AppSettings (ExePath) in Workbook_Save: " + ex.Message)
+        End Try
         currWb = Wb
-        ' get the definition range
+        ' always reset Rdefinitions when changing Workbooks (may not be the current one, if saved programmatically!), otherwise this is not being refilled in getRNames
+        Rdefinitions = Nothing
+        ' get the defined R_Addin Names
         Dim errStr As String
+        errStr = getRNames()
+        If errStr = "no definitions" Then Exit Sub
+        If errStr <> vbNullString Then
+            MsgBox("Error while getRNames in Workbook_Save: " + errStr)
+            Exit Sub
+        End If
         ' get the definition range
         errStr = getRDefinitions()
-        If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
-
+        If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions in Workbook_Save: " + errStr)
         errStr = storeArgs()
-        If errStr <> "" Then MsgBox("Error when saving inputfiles: " + errStr)
+        If errStr <> "" Then MsgBox("Error when saving inputfiles in Workbook_Save: " + errStr)
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
-        currWb = Wb
-        ' get the definition range
-        Dim errStr As String
-        errStr = getRNames()
-        If errStr = "no definitions" Then Exit Sub
-        ' get the definition range
-        errStr = getRDefinitions()
-        If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
-        MyFunctions.theRibbon.Invalidate()
+        ' is being treated in Workbook_Activate...
     End Sub
 
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
+        ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
+        Try
+            MyFunctions.rexec = ConfigurationManager.AppSettings("ExePath").ToString()
+        Catch ex As Exception
+            MsgBox("Error when retrieving AppSettings (ExePath) in Workbook_Activate: " + ex.Message)
+        End Try
         currWb = Wb
-        ' get the definition range
+        ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
+        Rdefinitions = Nothing
+        ' get the defined R_Addin Names
         Dim errStr As String
         errStr = getRNames()
         If errStr = "no definitions" Then Exit Sub
-        ' get the definition range
+        If errStr <> vbNullString Then
+            MsgBox("Error while getRNames in Workbook_Activate: " + errStr)
+            Exit Sub
+        End If
+        ' get the definitions from the current defined range (first name in R_Addin Names)
         errStr = getRDefinitions()
-        If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions: " + errStr)
+        If errStr <> vbNullString Then MsgBox("Error while getRdefinitions in Workbook_Activate: " + errStr)
         MyFunctions.theRibbon.Invalidate()
     End Sub
 End Class
@@ -371,11 +425,11 @@ Public Class MyRibbon
     Public Sub startRprocess(control As ExcelDna.Integration.CustomUI.IRibbonControl)
         Dim errStr As String
         If UBound(Rcalldefnames) = -1 Then
-            MsgBox("no Rdefinitions found for R_Addin (3 column named range (type/value/path), minimum types: rexec and script)!")
+            MsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
             Exit Sub
         End If
         If MyFunctions.Rdefinitions Is Nothing Then
-            MsgBox("no Rdefinition selected for starting R script!")
+            MsgBox("Rdefinitions Is Nothing (this shouldn't actually happen) !")
             Exit Sub
         End If
         errStr = MyFunctions.startRprocess()
