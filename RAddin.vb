@@ -17,7 +17,7 @@ Public Module MyFunctions
     ' definitions of current R invocation (scripts, args, results, diags...)
     Dim RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
 
-    ' prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags
+    ' prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags 
     Function prepareParams(c As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
         Dim value As String = RdefDic(name)(c)
         ' only for args, results and diags (scripts dont have a target range)
@@ -25,7 +25,7 @@ Public Module MyFunctions
             Try
                 RDataRange = currWb.Names.Item(value).RefersToRange
             Catch ex As Exception
-                Return "Error occured when looking up " + name + " range '" + value + "', " + ex.Message
+                Return "Error occured when looking up " + name + " range '" + value + "' (defined correctly ?), " + ex.Message
             End Try
         End If
         ' if argvalue refers to a WS Name, cut off WS name prefix for R file name...
@@ -118,7 +118,7 @@ Public Module MyFunctions
                             If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
                                 printedValue = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
                             ElseIf IsNumeric(RDataRange(i, j).Value2) Then
-                                printedValue = String.Format("{0:##################.########}", RDataRange(i, j).Value2)
+                                printedValue = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
                             Else
                                 printedValue = RDataRange(i, j).Value2
                             End If
@@ -155,26 +155,32 @@ Public Module MyFunctions
             Try
                 afile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
             Catch ex As Exception
-                Return "Error occured when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message
+                Return "Error occured in getResults when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message
             End Try
 
             ' parse the actual file line by line
             Dim i As Integer = 1, currentRecord As String(), currentLine As String
-            RDataRange.Clear()
+            RDataRange.ClearContents()
             Do While Not afile.EndOfStream
                 Try
                     currentLine = afile.ReadLine
                     currentRecord = currentLine.Split(vbTab)
                 Catch ex As FileIO.MalformedLineException
                     afile.Close()
-                    Return "Error occured when parsing file '" + resFilename + "', " + ex.Message
+                    Return "Error occured in getResults when parsing file '" + resFilename + "', " + ex.Message
                 End Try
                 ' Put parsed data into target range column by column
                 For j = 1 To currentRecord.Count()
-                    RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
+                    Try
+                        RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
+                    Catch ex As Exception
+                        afile.Close()
+                        Return "Error occured in getResults when writing data into '" + RDataRange.Parent.name + "!" + RDataRange.Address + "', " + ex.Message
+                    End Try
                 Next
                 i = i + 1
             Loop
+            afile.Close()
         Next
         Return errMsg
     End Function
