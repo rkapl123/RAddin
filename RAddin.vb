@@ -197,7 +197,7 @@ Public Module MyFunctions
             If Len(errMsg) > 0 Then Exit For
             ' clean previously set shapes...
             For Each oldShape As Shape In RDataRange.Worksheet.Shapes
-                If oldShape.TopLeftCell.Address = RDataRange.Address Then
+                If oldShape.Name = diagFilename Then
                     oldShape.Delete()
                     Exit For
                 End If
@@ -206,9 +206,10 @@ Public Module MyFunctions
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             Try
-                RDataRange.Worksheet.Shapes.AddPicture( _
-                    Filename:=curWbPrefix + readdir + "\" + diagFilename, _
+                With RDataRange.Worksheet.Shapes.AddPicture(Filename:=curWbPrefix + readdir + "\" + diagFilename, _
                     LinkToFile:=False, SaveWithDocument:=True, Left:=RDataRange.Left, Top:=RDataRange.Top, Width:=-1, Height:=-1)
+                    .Name = diagFilename
+                End With
             Catch ex As Exception
                 Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
             End Try
@@ -276,8 +277,30 @@ Public Module MyFunctions
         Return vbNullString
     End Function
 
+    Public Function startRdefRefresh() As String
+        Dim errStr As String
+        ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
+        Rdefinitions = Nothing
+        ' get the defined R_Addin Names
+        errStr = getRNames()
+        If errStr = "no definitions" Then
+            Return vbNullString
+        ElseIf errStr <> vbNullString Then
+            Return "Error while getRNames in startRdefRefresh: " + errStr
+        End If
+        MyFunctions.theRibbon.Invalidate()
+        Return vbNullString
+    End Function
+
     ' gets defined named ranges for R script invocation in the current workbook 
     Function getRNames() As String
+        ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
+        Try
+            rexec = ConfigurationManager.AppSettings("ExePath").ToString()
+        Catch ex As Exception
+            Return "no ExePath when retrieving AppSettings in getRNames: " + ex.Message
+        End Try
+
         ReDim Preserve Rcalldefnames(-1)
         ReDim Preserve Rcalldefs(-1)
         For Each namedrange As Name In currWb.Names
@@ -369,27 +392,12 @@ Public Class AddIn
     End Sub
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
-        If UBound(Rcalldefnames) = -1 Or MyFunctions.Rdefinitions Is Nothing Then Exit Sub
-        ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
-        Try
-            MyFunctions.rexec = ConfigurationManager.AppSettings("ExePath").ToString()
-        Catch ex As Exception
-            MsgBox("Error when retrieving AppSettings (ExePath) in Workbook_Save: " + ex.Message)
-        End Try
-        currWb = Wb
-        ' always reset Rdefinitions when changing Workbooks (may not be the current one, if saved programmatically!), otherwise this is not being refilled in getRNames
-        Rdefinitions = Nothing
-        ' get the defined R_Addin Names
         Dim errStr As String
-        errStr = getRNames()
-        If errStr = "no definitions" Then Exit Sub
+        errStr = doDefinitions(Wb)
         If errStr <> vbNullString Then
-            MsgBox("Error while getRNames in Workbook_Save: " + errStr)
+            MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
             Exit Sub
         End If
-        ' get the definition range
-        errStr = getRDefinitions()
-        If errStr <> vbNullString Then MsgBox("Error while getting Rdefinitions in Workbook_Save: " + errStr)
         errStr = storeArgs()
         If errStr <> "" Then MsgBox("Error when saving inputfiles in Workbook_Save: " + errStr)
     End Sub
@@ -399,28 +407,33 @@ Public Class AddIn
     End Sub
 
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
-        ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
-        Try
-            MyFunctions.rexec = ConfigurationManager.AppSettings("ExePath").ToString()
-        Catch ex As Exception
-            MsgBox("Error when retrieving AppSettings (ExePath) in Workbook_Activate: " + ex.Message)
-        End Try
+        Dim errStr As String
+        errStr = doDefinitions(Wb)
+        If errStr <> vbNullString Then
+            MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
+            Exit Sub
+        End If
+        MyFunctions.theRibbon.Invalidate()
+    End Sub
+
+    Private Function doDefinitions(Wb As Workbook) As String
+        Dim errStr As String
         currWb = Wb
-        ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
+        ' always reset Rdefinitions when changing Workbooks (may not be the current one, if saved programmatically!), otherwise this is not being refilled in getRNames
         Rdefinitions = Nothing
         ' get the defined R_Addin Names
-        Dim errStr As String
         errStr = getRNames()
-        If errStr = "no definitions" Then Exit Sub
+        If errStr = "no definitions" Or Left(errStr, 10) = "no ExePath" Then
+            Return vbNullString
+        End If
         If errStr <> vbNullString Then
-            MsgBox("Error while getRNames in Workbook_Activate: " + errStr)
-            Exit Sub
+            Return "Error while getRNames in doDefinitions: " + errStr
         End If
         ' get the definitions from the current defined range (first name in R_Addin Names)
         errStr = getRDefinitions()
-        If errStr <> vbNullString Then MsgBox("Error while getRdefinitions in Workbook_Activate: " + errStr)
-        MyFunctions.theRibbon.Invalidate()
-    End Sub
+        If errStr <> vbNullString Then Return "Error while getRdefinitions in doDefinitions: " + errStr
+        Return vbNullString
+    End Function
 End Class
 
 ' Events from Ribbon
@@ -442,8 +455,18 @@ Public Class MyRibbon
         If errStr <> "" Then MsgBox(errStr)
     End Sub
 
+    Public Sub refreshRdefs(control As ExcelDna.Integration.CustomUI.IRibbonControl)
+        Dim errStr As String
+        errStr = MyFunctions.startRdefRefresh()
+        If errStr <> vbNullString Then
+            MsgBox(errStr)
+        Else
+            MsgBox("refreshed Rdefinitions from current Workbook !")
+        End If
+    End Sub
+
     Public Function GetItemCount(control As ExcelDna.Integration.CustomUI.IRibbonControl) As Integer
-        Return(MyFunctions.Rcalldefnames.Length)
+        Return (MyFunctions.Rcalldefnames.Length)
     End Function
 
     Public Function GetItemLabel(control As ExcelDna.Integration.CustomUI.IRibbonControl, index As Integer) As String
@@ -456,6 +479,8 @@ Public Class MyRibbon
 
     Public Sub selectItem(control As ExcelDna.Integration.CustomUI.IRibbonControl, id As String, index As Integer)
         MyFunctions.Rdefinitions = Rcalldefs(index)
+        MyFunctions.Rdefinitions.Parent.Select()
+        MyFunctions.Rdefinitions.Select()
     End Sub
     Public Sub ribbonLoaded(myribbon As ExcelDna.Integration.CustomUI.IRibbonUI)
         MyFunctions.theRibbon = myribbon

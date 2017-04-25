@@ -3,7 +3,8 @@ Simple Excel-DNA based Add-in for handling R-scripts from Excel, storing input o
 retrieving result objects (scalars/vectors/matrices) as text files (currently restricted to tab separated).
 Graphics are retrieved from produced png files into Excel to be displayed as diagrams.
 
-Installation: put Raddin-AddIn-packed.xll into %appdata%\Microsoft\AddIns and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the Addin manually).
+Installation: put Raddin-AddIn-packed.xll and Raddin-AddIn-packed.xll.config into %appdata%\Microsoft\AddIns 
+and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the Addin manually).
 
 Documentation in accompanying testDocumentationRAddin.xlsx
 
