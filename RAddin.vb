@@ -232,7 +232,11 @@ Public Module MyFunctions
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing result files...
             If File.Exists(curWbPrefix + readdir + "\" + resFilename) Then
-                File.Delete(curWbPrefix + readdir + "\" + resFilename)
+                Try
+                    File.Delete(curWbPrefix + readdir + "\" + resFilename)
+                Catch ex As Exception
+                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + resFilename + "', " + ex.Message
+                End Try
             End If
         Next
         For c As Integer = 0 To RdefDic("diags").Length - 1
@@ -243,7 +247,11 @@ Public Module MyFunctions
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing diagram files...
             If File.Exists(curWbPrefix + readdir + "\" + diagFilename) Then
-                File.Delete(curWbPrefix + readdir + "\" + diagFilename)
+                Try
+                    File.Delete(curWbPrefix + readdir + "\" + diagFilename)
+                Catch ex As Exception
+                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + diagFilename + "', " + ex.Message
+                End Try
             End If
         Next
         Return errMsg
