@@ -328,7 +328,7 @@ Public Module MyFunctions
                 Rcalldefs(Rcalldefs.Length - 1) = namedrange.RefersToRange
             End If
         Next
-        If UBound(Rcalldefnames) = -1 Then Return "no definitions"
+        If UBound(Rcalldefnames) = -1 Then Return "no RNames"
         Return vbNullString
     End Function
 
@@ -402,6 +402,7 @@ Public Class AddIn
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
         Dim errStr As String
         errStr = doDefinitions(Wb)
+        If errStr = "no RNames" Then Exit Sub
         If errStr <> vbNullString Then
             MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
             Exit Sub
@@ -417,6 +418,7 @@ Public Class AddIn
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
         errStr = doDefinitions(Wb)
+        If errStr = "no RNames" Then Exit Sub
         If errStr <> vbNullString Then
             MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
             Exit Sub
@@ -431,9 +433,7 @@ Public Class AddIn
         Rdefinitions = Nothing
         ' get the defined R_Addin Names
         errStr = getRNames()
-        If errStr = "no definitions" Or Left(errStr, 10) = "no ExePath" Then
-            Return vbNullString
-        End If
+        If errStr = "no RNames" Then Return "no RNames"
         If errStr <> vbNullString Then
             Return "Error while getRNames in doDefinitions: " + errStr
         End If
