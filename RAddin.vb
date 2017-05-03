@@ -44,21 +44,20 @@ Public Module MyFunctions
     Public Function invokeScripts() As String
         Dim script As String = vbNullString
         Dim scriptpath As String
-        Dim errMsg As String = vbNullString
 
         scriptpath = dirglobal
         For c As Integer = 0 To RdefDic("scripts").Length - 1
-            errMsg = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
-            If Len(errMsg) > 0 Then Exit For
+            Dim ErrMsg As String = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
+            If Len(ErrMsg) > 0 Then Return ErrMsg
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
             Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + scriptpath
             If Not File.Exists(fullScriptPath + "\" + script) Then
-                Return "Script '" + fullScriptPath + "\" + script + "' not found!"
+                Return "Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf
             End If
             If Not File.Exists(rexec) And rexec <> "cmd" Then
-                Return "Executable '" + rexec + "' not found!"
+                Return "Executable '" + rexec + "' not found!" + vbCrLf
             End If
             Try
                 Dim cmd As Process
@@ -66,17 +65,21 @@ Public Module MyFunctions
                 cmd.StartInfo.FileName = IIf(rexec = "cmd", script, rexec)
                 cmd.StartInfo.Arguments = IIf(rexec = "cmd", "", script)
                 cmd.StartInfo.RedirectStandardInput = False
-                cmd.StartInfo.RedirectStandardOutput = False
+                cmd.StartInfo.RedirectStandardOutput = IIf(rexec = "cmd", False, RdefDic("debug")(c))
+                cmd.StartInfo.RedirectStandardError = IIf(rexec = "cmd", False, RdefDic("debug")(c))
                 cmd.StartInfo.CreateNoWindow = False
                 cmd.StartInfo.UseShellExecute = (rexec = "cmd")
                 cmd.StartInfo.WorkingDirectory = fullScriptPath
                 cmd.Start()
                 cmd.WaitForExit()
+                If RdefDic("debug")(c) And rexec <> "cmd" Then
+                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
+                End If
             Catch ex As Exception
-                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message
+                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message + vbCrLf
             End Try
         Next
-        Return errMsg
+        Return vbNullString
     End Function
 
     ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd" 
@@ -85,13 +88,13 @@ Public Module MyFunctions
         Dim argFilename As String = vbNullString, argdir As String
         Dim RDataRange As Range = Nothing
         Dim outputFile As StreamWriter = Nothing
-        Dim errMsg As String = vbNullString
 
         argdir = dirglobal
         For c As Integer = 0 To RdefDic("args").Length - 1
             Try
+                Dim errMsg As String
                 errMsg = prepareParams(c, "args", RDataRange, argFilename, argdir, ".txt")
-                If Len(errMsg) > 0 Then Exit For
+                If Len(errMsg) > 0 Then Return errMsg
 
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
                 Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
@@ -130,12 +133,12 @@ Public Module MyFunctions
                     i = i + 1
                 Loop Until i > RDataRange.Rows.Count
             Catch ex As Exception
-                errMsg = "Error occured when creating inputfile '" + argFilename + "', " + ex.Message
-            Finally
                 If outputFile IsNot Nothing Then outputFile.Close()
+                Return "Error occured when creating inputfile '" + argFilename + "', " + ex.Message
             End Try
+            If outputFile IsNot Nothing Then outputFile.Close()
         Next
-        Return errMsg
+        Return vbNullString
     End Function
 
     ' get Outputfiles for defined results ranges, tab separated
@@ -148,12 +151,13 @@ Public Module MyFunctions
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("results").Length - 1
             errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
-            If Len(errMsg) > 0 Then Exit For
+            If Len(errMsg) > 0 Then Return errMsg
+
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
-            Dim afile As StreamReader = Nothing
+            Dim infile As StreamReader = Nothing
             Try
-                afile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
+                infile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
             Catch ex As Exception
                 Return "Error occured in getResults when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message
             End Try
@@ -161,12 +165,12 @@ Public Module MyFunctions
             ' parse the actual file line by line
             Dim i As Integer = 1, currentRecord As String(), currentLine As String
             RDataRange.ClearContents()
-            Do While Not afile.EndOfStream
+            Do While Not infile.EndOfStream
                 Try
-                    currentLine = afile.ReadLine
+                    currentLine = infile.ReadLine
                     currentRecord = currentLine.Split(vbTab)
                 Catch ex As FileIO.MalformedLineException
-                    afile.Close()
+                    If infile IsNot Nothing Then infile.Close()
                     Return "Error occured in getResults when parsing file '" + resFilename + "', " + ex.Message
                 End Try
                 ' Put parsed data into target range column by column
@@ -174,15 +178,15 @@ Public Module MyFunctions
                     Try
                         RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
                     Catch ex As Exception
-                        afile.Close()
+                        If infile IsNot Nothing Then infile.Close()
                         Return "Error occured in getResults when writing data into '" + RDataRange.Parent.name + "!" + RDataRange.Address + "', " + ex.Message
                     End Try
                 Next
                 i = i + 1
             Loop
-            afile.Close()
+            If infile IsNot Nothing Then infile.Close()
         Next
-        Return errMsg
+        Return vbNullString
     End Function
 
     ' get Output diagrams (png) for defined diags ranges
@@ -194,7 +198,8 @@ Public Module MyFunctions
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("diags").Length - 1
             errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
-            If Len(errMsg) > 0 Then Exit For
+            If Len(errMsg) > 0 Then Return errMsg
+
             ' clean previously set shapes...
             For Each oldShape As Shape In RDataRange.Worksheet.Shapes
                 If oldShape.Name = diagFilename Then
@@ -214,7 +219,7 @@ Public Module MyFunctions
                 Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
             End Try
         Next
-        Return errMsg
+        Return vbNullString
     End Function
 
     ' remove result and diagram files from arg(ument) ranges
@@ -226,7 +231,7 @@ Public Module MyFunctions
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("results").Length - 1
             errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
-            If Len(errMsg) > 0 Then Exit For
+            If Len(errMsg) > 0 Then Return errMsg
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
@@ -241,7 +246,7 @@ Public Module MyFunctions
         Next
         For c As Integer = 0 To RdefDic("diags").Length - 1
             errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
-            If Len(errMsg) > 0 Then Exit For
+            If Len(errMsg) > 0 Then Return errMsg
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
@@ -254,7 +259,7 @@ Public Module MyFunctions
                 End Try
             End If
         Next
-        Return errMsg
+        Return vbNullString
     End Function
 
 
@@ -343,6 +348,7 @@ Public Module MyFunctions
             RdefDic("diagspaths") = {}
             RdefDic("scripts") = {}
             RdefDic("scriptspaths") = {}
+            RdefDic("debug") = {}
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
@@ -365,7 +371,9 @@ Public Module MyFunctions
                     RdefDic("diags")(RdefDic("diags").Length - 1) = defval
                     ReDim Preserve RdefDic("diagspaths")(RdefDic("diagspaths").Length)
                     RdefDic("diagspaths")(RdefDic("diagspaths").Length - 1) = deffilepath
-                ElseIf deftype = "script" Then
+                ElseIf deftype = "script" Or deftype = "debug" Then
+                    ReDim Preserve RdefDic("debug")(RdefDic("debug").Length)
+                    RdefDic("debug")(RdefDic("debug").Length - 1) = (deftype = "debug")
                     ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
                     RdefDic("scripts")(RdefDic("scripts").Length - 1) = defval
                     ReDim Preserve RdefDic("scriptspaths")(RdefDic("scriptspaths").Length)
@@ -462,6 +470,7 @@ Public Class MyRibbon
         errStr = MyFunctions.startRprocess()
         If errStr <> "" Then MsgBox(errStr)
     End Sub
+
 
     Public Sub refreshRdefs(control As ExcelDna.Integration.CustomUI.IRibbonControl)
         Dim errStr As String
