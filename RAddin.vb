@@ -21,7 +21,7 @@ Public Module MyFunctions
     Function prepareParams(c As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
         Dim value As String = RdefDic(name)(c)
         ' only for args, results and diags (scripts dont have a target range)
-        If name = "args" Or name = "results" Or name = "diags" Then
+        If name = "args" Or name = "results" Or name = "diags" Or name = "scriptrng" Then
             Try
                 RDataRange = currWb.Names.Item(value).RefersToRange
             Catch ex As Exception
@@ -37,48 +37,6 @@ Public Module MyFunctions
             returnPath = RdefDic(name + "paths")(c)
         End If
         returnName = value + ext
-        Return vbNullString
-    End Function
-
-    ' invokes current scripts/args/results definition
-    Public Function invokeScripts() As String
-        Dim script As String = vbNullString
-        Dim scriptpath As String
-
-        scriptpath = dirglobal
-        For c As Integer = 0 To RdefDic("scripts").Length - 1
-            Dim ErrMsg As String = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
-            If Len(ErrMsg) > 0 Then Return ErrMsg
-
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
-            Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
-            Dim fullScriptPath = curWbPrefix + scriptpath
-            If Not File.Exists(fullScriptPath + "\" + script) Then
-                Return "Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf
-            End If
-            If Not File.Exists(rexec) And rexec <> "cmd" Then
-                Return "Executable '" + rexec + "' not found!" + vbCrLf
-            End If
-            Try
-                Dim cmd As Process
-                cmd = New Process()
-                cmd.StartInfo.FileName = IIf(rexec = "cmd", script, rexec)
-                cmd.StartInfo.Arguments = IIf(rexec = "cmd", "", script)
-                cmd.StartInfo.RedirectStandardInput = False
-                cmd.StartInfo.RedirectStandardOutput = IIf(rexec = "cmd", False, RdefDic("debug")(c))
-                cmd.StartInfo.RedirectStandardError = IIf(rexec = "cmd", False, RdefDic("debug")(c))
-                cmd.StartInfo.CreateNoWindow = False
-                cmd.StartInfo.UseShellExecute = (rexec = "cmd")
-                cmd.StartInfo.WorkingDirectory = fullScriptPath
-                cmd.Start()
-                cmd.WaitForExit()
-                If RdefDic("debug")(c) And rexec <> "cmd" Then
-                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
-                End If
-            Catch ex As Exception
-                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message + vbCrLf
-            End Try
-        Next
         Return vbNullString
     End Function
 
@@ -137,6 +95,108 @@ Public Module MyFunctions
                 Return "Error occured when creating inputfile '" + argFilename + "', " + ex.Message
             End Try
             If outputFile IsNot Nothing Then outputFile.Close()
+        Next
+        Return vbNullString
+    End Function
+
+    ' creates script files for defined scriptRng ranges 
+    Public Function storeScriptRng() As String
+        Dim scriptRngFilename As String = vbNullString, scriptRngdir = vbNullString, scriptText = vbNullString
+        Dim RDataRange As Range = Nothing
+        Dim outputFile As StreamWriter = Nothing
+
+        scriptRngdir = dirglobal
+        For c As Integer = 0 To RdefDic("scriptrng").Length - 1
+            Try
+                Dim errMsg As String
+                errMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
+                If Len(errMsg) > 0 Then
+                    scriptText = RdefDic("scriptrng")(c)
+                    scriptRngFilename = "RDataRangeRow" + c.ToString() + ".R"
+                End If
+
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
+                Dim curWbPrefix As String = IIf(Left(scriptRngdir, 2) = "\\" Or Mid(scriptRngdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' remove any existing input files...
+                If File.Exists(curWbPrefix + scriptRngdir + "\" + scriptRngFilename) Then
+                    File.Delete(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
+                End If
+
+                outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
+
+                ' reuse the script invocation methods by setting the respective parameters
+                ReDim Preserve RdefDic("debug")(RdefDic("debug").Length)
+                RdefDic("debug")(RdefDic("debug").Length - 1) = RdefDic("debugrng")(c)
+                ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
+                RdefDic("scripts")(RdefDic("scripts").Length - 1) = scriptRngFilename
+                ReDim Preserve RdefDic("scriptspaths")(RdefDic("scriptspaths").Length)
+                RdefDic("scriptspaths")(RdefDic("scriptspaths").Length - 1) = scriptRngdir
+
+                ' write the RDataRange or scriptText (if script directly in value) to file
+                If Not IsNothing(scriptText) Then
+                    outputFile.WriteLine(scriptText)
+                Else
+                    Dim i As Integer = 1
+                    Do
+                        Dim j As Integer = 1
+                        Dim writtenLine As String = ""
+                        If RDataRange(i, 1).Value2.ToString <> "" Then
+                            Do
+                                writtenLine = writtenLine + RDataRange(i, j).Value2
+                                j = j + 1
+                            Loop Until j > RDataRange.Columns.Count
+                            outputFile.WriteLine(writtenLine)
+                        End If
+                        i = i + 1
+                    Loop Until i > RDataRange.Rows.Count
+                End If
+            Catch ex As Exception
+                If outputFile IsNot Nothing Then outputFile.Close()
+                Return "Error occured when creating script file '" + scriptRngFilename + "', " + ex.Message
+            End Try
+            If outputFile IsNot Nothing Then outputFile.Close()
+        Next
+        Return vbNullString
+    End Function
+
+    ' invokes current scripts/args/results definition
+    Public Function invokeScripts() As String
+        Dim script As String = vbNullString
+        Dim scriptpath As String
+
+        scriptpath = dirglobal
+        For c As Integer = 0 To RdefDic("scripts").Length - 1
+            Dim ErrMsg As String = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
+            If Len(ErrMsg) > 0 Then Return ErrMsg
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
+            Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
+            Dim fullScriptPath = curWbPrefix + scriptpath
+            If Not File.Exists(fullScriptPath + "\" + script) Then
+                Return "Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf
+            End If
+            If Not File.Exists(rexec) And rexec <> "cmd" Then
+                Return "Executable '" + rexec + "' not found!" + vbCrLf
+            End If
+            Try
+                Dim cmd As Process
+                cmd = New Process()
+                cmd.StartInfo.FileName = IIf(rexec = "cmd", script, rexec)
+                cmd.StartInfo.Arguments = IIf(rexec = "cmd", "", script)
+                cmd.StartInfo.RedirectStandardInput = False
+                cmd.StartInfo.RedirectStandardOutput = IIf(rexec = "cmd", False, RdefDic("debug")(c))
+                cmd.StartInfo.RedirectStandardError = IIf(rexec = "cmd", False, RdefDic("debug")(c))
+                cmd.StartInfo.CreateNoWindow = False
+                cmd.StartInfo.UseShellExecute = (rexec = "cmd")
+                cmd.StartInfo.WorkingDirectory = fullScriptPath
+                cmd.Start()
+                cmd.WaitForExit()
+                If RdefDic("debug")(c) And rexec <> "cmd" Then
+                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
+                End If
+            Catch ex As Exception
+                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message + vbCrLf
+            End Try
         Next
         Return vbNullString
     End Function
@@ -222,40 +282,60 @@ Public Module MyFunctions
         Return vbNullString
     End Function
 
-    ' remove result and diagram files from arg(ument) ranges
-    Public Function removeResultsAndDiags() As String
-        Dim resFilename As String = vbNullString, diagFilename As String = vbNullString, readdir As String
+    ' remove result, diagram and temporary R script files
+    Public Function removeFiles() As String
+        Dim filename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
         Dim errMsg As String = vbNullString
 
         readdir = dirglobal
+        ' remove result files
         For c As Integer = 0 To RdefDic("results").Length - 1
-            errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
+            errMsg = prepareParams(c, "results", RDataRange, filename, readdir, ".txt")
             If Len(errMsg) > 0 Then Return errMsg
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing result files...
-            If File.Exists(curWbPrefix + readdir + "\" + resFilename) Then
+            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
-                    File.Delete(curWbPrefix + readdir + "\" + resFilename)
+                    File.Delete(curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
-                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + resFilename + "', " + ex.Message
+                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
                 End Try
             End If
         Next
+        ' remove diagram files
         For c As Integer = 0 To RdefDic("diags").Length - 1
-            errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
+            errMsg = prepareParams(c, "diags", RDataRange, filename, readdir, ".png")
             If Len(errMsg) > 0 Then Return errMsg
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing diagram files...
-            If File.Exists(curWbPrefix + readdir + "\" + diagFilename) Then
+            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
-                    File.Delete(curWbPrefix + readdir + "\" + diagFilename)
+                    File.Delete(curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
-                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + diagFilename + "', " + ex.Message
+                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
+                End Try
+            End If
+        Next
+        ' remove temporary R script files
+        For c As Integer = 0 To RdefDic("scriptrng").Length - 1
+            errMsg = prepareParams(c, "scriptrng", RDataRange, filename, readdir, ".R")
+            If Len(errMsg) > 0 Then
+                filename = "RDataRangeRow" + c.ToString() + ".R"
+            End If
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' remove any existing diagram files...
+            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
+                Try
+                    File.Delete(curWbPrefix + readdir + "\" + filename)
+                Catch ex As Exception
+                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
                 End Try
             End If
         Next
@@ -272,11 +352,14 @@ Public Module MyFunctions
         errStr = getRDefinitions()
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
         ' remove result and diagram files from arg(ument) ranges
-        errStr = removeResultsAndDiags()
-        If errStr <> vbNullString Then Return "removing  result and diagram files returned error: " + errStr
+        errStr = removeFiles()
+        If errStr <> vbNullString Then Return "removing files returned error: " + errStr
         ' store input files from arg(ument) ranges
         errStr = storeArgs()
         If errStr <> vbNullString Then Return "storing input files returned error: " + errStr
+        ' store scripts contained in Range from scriptRng ranges
+        errStr = storeScriptRng()
+        If errStr <> vbNullString Then Return "storing scriptRng ranges returned error: " + errStr
         ' invoke r script(s)
         errStr = invokeScripts()
         If errStr <> vbNullString Then Return "invoking scripts returned error: " + errStr
@@ -348,6 +431,9 @@ Public Module MyFunctions
             RdefDic("diagspaths") = {}
             RdefDic("scripts") = {}
             RdefDic("scriptspaths") = {}
+            RdefDic("scriptrng") = {}
+            RdefDic("scriptrngpaths") = {}
+            RdefDic("debugrng") = {}
             RdefDic("debug") = {}
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
@@ -361,6 +447,13 @@ Public Module MyFunctions
                     RdefDic("args")(RdefDic("args").Length - 1) = defval
                     ReDim Preserve RdefDic("argspaths")(RdefDic("argspaths").Length)
                     RdefDic("argspaths")(RdefDic("argspaths").Length - 1) = deffilepath
+                ElseIf deftype = "scriptrng" Or deftype = "debugrng" Then
+                    ReDim Preserve RdefDic("debugrng")(RdefDic("debugrng").Length)
+                    RdefDic("debugrng")(RdefDic("debugrng").Length - 1) = (deftype = "debugrng")
+                    ReDim Preserve RdefDic("scriptrng")(RdefDic("scriptrng").Length)
+                    RdefDic("scriptrng")(RdefDic("scriptrng").Length - 1) = defval
+                    ReDim Preserve RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length)
+                    RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length - 1) = deffilepath
                 ElseIf deftype = "res" Then
                     ReDim Preserve RdefDic("results")(RdefDic("results").Length)
                     RdefDic("results")(RdefDic("results").Length - 1) = defval
@@ -383,7 +476,7 @@ Public Module MyFunctions
                 End If
             Next
             If rexec = "" Then Return "Error in getRDefinitions: no rexec defined"
-            If RdefDic("scripts").Count = 0 Then Return "Error in getRDefinitions: no script(s) defined"
+            If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined"
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message
         End Try
