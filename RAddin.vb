@@ -73,7 +73,7 @@ Public Module MyFunctions
                 Do
                     Dim j As Integer = 1
                     Dim writtenLine As String = ""
-                    If RDataRange(i, 1).Value2.ToString <> "" Then
+                    If RDataRange(i, 1).Value2 IsNot Nothing Then
                         Do
                             Dim printedValue As String
                             If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
