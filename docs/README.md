@@ -1,13 +1,11 @@
-# RAddin
-
 R Addin provides an easy way to define and run R script interactions started from Excel.
 
-## Using RAddin
+# Using RAddin
 
-Running an R script is simply done by selecting the appropriate Rdefinition and pressing "run this Rdefinition" on the R Addin Ribbon Tab. 
+Running an R script is simply done by selecting the appropriate Rdefinition and pressing "run Rdefinition/shell" on the R Addin Ribbon Tab. 
 Selecting the Rdefinition highlights the specified definition area (see below).
 
-## Defining RAddin script interactions (Rdefinitions)
+# Defining RAddin script interactions (Rdefinitions)
 
 Rscript interactions (Rdefinitions) are defined using a 3 column named area (1st col: definition type, 2nd: definition value, 3rd: definition path):
 
@@ -16,7 +14,7 @@ The Rdefinition area name must start with R_Addin and can have an optional postf
 An area name can be Workbook global or worksheet local, the first Rdefinition area is being taken as the default definition (used for running when not selecting a Rdefinition).
 the worksheet name (for worksheet local names) or the workbook name (for workbook global names) is prepended to the postfix definition description.
 
-So for the 4 areas defined in the test workbook testRAddin.xlsx there should be 7 entries in the Rdefinition dropdown: 
+So for the 7 areas currently defined in the test workbook testRAddin.xlsx, there should be 7 entries in the Rdefinition dropdown: 
 
 - Test_RdotNet, 
 - Test_OtherSheet, 
@@ -43,13 +41,13 @@ For arg, res, scriptrng and diag these are range names referring to the respecti
 
 The range names that are referred in arg, res, scriptrng and diag types can also be either workbook global (having no ! in front of the name) or worksheet local (having the worksheet name + ! in front of the name)
 
-The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing "refresh Rdefinitions" on the R Addin Ribbon Tab.
+The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
 
-## Installation of RAddin
+# Installation of RAddin
 
 put Raddin-AddIn-packed.xll and Raddin-AddIn-packed.xll.config (Raddin-AddIn64-packed.xll and Raddin-AddIn64-packed.xll.config for 64 bit excel) into %appdata%\Microsoft\AddIns 
 and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the Addin manually).
 
-## Building RAddin
+# Building RAddin
 
 Building: all packages necessary for building are contained, simply open Raddin.sln and build the solution.
