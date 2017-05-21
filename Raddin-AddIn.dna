@@ -26,11 +26,14 @@
     <customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui' loadImage='LoadImage' onLoad='ribbonLoaded'>
       <ribbon>
         <tabs>
-          <tab id='CustomTab' label='R Addin'>
-            <group id='UploadGroup' label='R Scripts'>
+          <tab id='RaddinTab' label='R Addin'>
+            <group id='RaddinGroup' label='R Scripts'>
               <dropDown id='scriptDropDown' label ='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount'  getItemID='GetItemID'  getItemLabel='GetItemLabel' onAction='selectItem' />
-              <button id='Button1' label='run Rdefinition' image='M' size='normal' onAction='startRprocess' tag='1' screentip="run R script from dropdown" supertip="runs R script defined in corresponding range R_Addin" />
-              <button id='Button3' label='refresh Rdefinitions' image='M' size='normal' onAction='refreshRdefs' tag='2' screentip="refresh Rdefinitions from current Workbook" supertip="refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin" />
+              <button id='Button1' label='run Rdefinion/shell' image='M' size='normal' onAction='startRprocessShell' tag='1' screentip="run R script from dropdown via Shell/Files" supertip="runs R script defined in corresponding range R_Addin via Shell/Files" />
+              <button id='Button2' label='run Rdefinion/RdotNet' image='M' size='normal' onAction='startRprocessRdotNet' tag='2' screentip="run R script from dropdown via RdotNet" supertip="runs R script defined in corresponding range R_Addin via RdotNet" />
+              <dialogBoxLauncher>
+                <button id='Button3' label='refresh Rdefinitions' onAction='refreshRdefs' tag='3' screentip="refresh Rdefinitions from current Workbook" supertip="refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin" />
+              </dialogBoxLauncher>
             </group >
           </tab>
         </tabs>

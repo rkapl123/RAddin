@@ -5,10 +5,11 @@ Imports System.Runtime.InteropServices
 Imports System.Configuration
 Imports ExcelDna.Integration.CustomUI
 Imports RDotNet
+Imports RDotNet.NativeLibrary
 
 Public Module RAddin
 
-    Public _engine As REngine
+    Public rdotnetengine As REngine = Nothing
     Public currWb As Workbook
     Public Rdefinitions As Range
     Public Rcalldefnames As String() = {}
@@ -350,61 +351,146 @@ Public Module RAddin
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     ' startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Public Function startRprocess() As String
+    Public Function startRprocess(runShell As Boolean) As String
         Dim errStr As String
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
-        If rexec IsNot Nothing And rpath Is Nothing Then ' shell invocation
-            ' remove result and diagram files from arg(ument) ranges
+        If runShell Then ' shell invocation
             errStr = removeFiles()
             If errStr <> vbNullString Then Return "removing files returned error: " + errStr
-            ' store input files from arg(ument) ranges
             errStr = storeArgs()
             If errStr <> vbNullString Then Return "storing input files returned error: " + errStr
-            ' store scripts contained in Range from scriptRng ranges
             errStr = storeScriptRng()
             If errStr <> vbNullString Then Return "storing scriptRng ranges returned error: " + errStr
-            ' invoke r script(s)
             errStr = invokeScripts()
             If errStr <> vbNullString Then Return "invoking scripts returned error: " + errStr
-            ' get and write output files into res(ult) ranges
             errStr = getResults()
             If errStr <> vbNullString Then Return "fetching/placing result files/content returned error: " + errStr
-            ' get and put result diagrams/pictures into dia(gram) ranges
             errStr = getDiags()
             If errStr <> vbNullString Then Return "fetching/placing result diagrams returned error: " + errStr
-        ElseIf rpath IsNot Nothing Then ' RDotNet invocation
-            ' initialize RdotNet engine
-            errStr = InitializeRDotNet()
+        Else ' RDotNet invocation
+            errStr = initializeRDotNet()
             If errStr <> vbNullString Then Return "initializing RdotNet returned error: " + errStr
-            ' test RdotNet engine
-            errStr = TestRDotNet()
+            errStr = prepareRunAndGetResults()
             If errStr <> vbNullString Then Return "TestRDotNet returned error: " + errStr
         End If
         ' all is OK = return nullstring
         Return vbNullString
     End Function
 
-    Private Function InitializeRDotNet() As String
+    ' initialize RdotNet engine
+    Private Function initializeRDotNet() As String
+        Dim logInfo As String = vbNullString
         Try
             REngine.SetEnvironmentVariables(rPath:=rpath)
-            _engine = REngine.GetInstance()
-            _engine.Initialize()
+            Dim rHome As String = vbNullString
+            logInfo = NativeUtility.FindRPaths(rpath, rHome) + ",Is64BitProcess:" + System.Environment.Is64BitProcess.ToString()
+            rdotnetengine = REngine.GetInstance()
+            rdotnetengine.Initialize()
         Catch ex As Exception
-            Return "Error initializing RDotNet: " + ex.Message
+            Return "Error initializing RDotNet: " + ex.Message + ",logInfo from FindRPaths: " + logInfo
         End Try
         Return vbNullString
     End Function
 
-    Private Function TestRDotNet() As String
-        Dim theArray() As Double = {30.02, 29.99, 30.11, 29.97, 30.01, 29.99}
-        Dim group1 As NumericVector = _engine.CreateNumericVector(theArray)
-        _engine.SetSymbol("group1", group1)
-        Dim group2 As NumericVector = _engine.Evaluate("group2 <- c(29.89, 29.93, 29.72, 29.98, 30.02, 29.98)").AsNumeric()
-        ' Test difference of mean And get the P-value.
-        Dim testResult As GenericVector = _engine.Evaluate("t.test(group1, group2)").AsList()
-        Dim p As Double = testResult("p.value").AsNumeric().First()
+    ' prepare arguments for rdotnet, run scripts and return results to excel
+    Private Function prepareRunAndGetResults() As String
+
+        ' First import arguments...
+        For c As Integer = 0 To RdefDic("args").Length - 1
+            Dim argname As String = RdefDic("args")(c)
+            ' if argvalue refers to a WS Name, cut off WS name prefix for R argname...
+            Dim posWSseparator = InStr(argname, "!")
+            If posWSseparator > 0 Then argname = argname.Substring(posWSseparator)
+            Dim RDataRange As Range = currWb.Names.Item(RdefDic("args")(c)).RefersToRange
+            Dim targetArg As RDotNet.DataFrame = Nothing
+            Try
+                ' write the RDataRange to RdotNet
+                Dim i As Integer = 1
+                Do
+                    Dim j As Integer = 1
+                    If RDataRange(i, 1).Value2 IsNot Nothing Then
+                        Do
+                            If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
+                                targetArg(i, j) = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+                            ElseIf IsNumeric(RDataRange(i, j).Value2) Then
+                                targetArg(i, j) = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
+                            Else
+                                targetArg(i, j) = RDataRange(i, j).Value2
+                            End If
+                            j = j + 1
+                        Loop Until j > RDataRange.Columns.Count
+                    End If
+                    i = i + 1
+                Loop Until i > RDataRange.Rows.Count
+                rdotnetengine.SetSymbol(argname, targetArg)
+            Catch ex As Exception
+                Return "Error occured when creating RdotNet arg '" + argname + "', " + ex.Message
+            End Try
+        Next
+
+        ' then evaluate excel stored scripts
+        For c As Integer = 0 To RdefDic("scriptrng").Length - 1
+            Dim scriptText As String = Nothing
+            Dim RDataRange As Range = Nothing
+            Try
+                RDataRange = currWb.Names.Item(RdefDic("scriptrng")(c)).RefersToRange
+            Catch
+                scriptText = RdefDic("scriptrng")(c)
+            End Try
+
+            If Not IsNothing(scriptText) Then
+                Try
+                    rdotnetengine.Evaluate(scriptText)
+                Catch ex As Exception
+                    Return "Error occured when evaluating script '" + scriptText + "', " + ex.Message
+                End Try
+            Else
+                Dim i As Integer = 1
+                Do
+                    Dim j As Integer = 1
+                    Dim evalLine As String = ""
+                    If RDataRange(i, 1).Value2 IsNot Nothing Then
+                        Do
+                            Try
+                                evalLine = RDataRange(i, j).Value2
+                                rdotnetengine.Evaluate(evalLine)
+                            Catch ex As Exception
+                                Return "Error occured when evaluating script line '" + evalLine + "', " + ex.Message
+                            End Try
+                            j = j + 1
+                        Loop Until j > RDataRange.Columns.Count
+                    End If
+                    i = i + 1
+                Loop Until i > RDataRange.Rows.Count
+            End If
+        Next
+
+        ' then evaluate filesystem stored scripts
+        Dim scriptpath As String = dirglobal
+        For c As Integer = 0 To RdefDic("args").Length - 1
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
+            Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
+
+            Dim scriptname As String = RdefDic("args")(c)
+            Try
+                rdotnetengine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
+            Catch ex As Exception
+                Return "Error occured when evaluating script '" + curWbPrefix + scriptpath + "\" + scriptname + "', " + ex.Message
+            End Try
+        Next
+
+        ' then evaluate (return) resultnames
+        For c As Integer = 0 To RdefDic("res").Length - 1
+            Dim resname As String = RdefDic("res")(c)
+            Try
+                rdotnetengine.Evaluate(resname)
+            Catch ex As Exception
+                Return "Error occured when evaluating result '" + resname + "', " + ex.Message
+            End Try
+        Next
+
         Return vbNullString
     End Function
 
@@ -539,6 +625,7 @@ Public Class AddIn
 
     'has to be implemented
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
+        If RAddin.rdotnetengine IsNot Nothing Then RAddin.rdotnetengine.Dispose()
     End Sub
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
@@ -591,7 +678,7 @@ End Class
 Public Class MyRibbon
     Inherits ExcelRibbon
 
-    Public Sub startRprocess(control As ExcelDna.Integration.CustomUI.IRibbonControl)
+    Private Sub startRprocess(runShell As Boolean)
         Dim errStr As String
         If UBound(Rcalldefnames) = -1 Then
             MsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
@@ -601,10 +688,17 @@ Public Class MyRibbon
             MsgBox("Rdefinitions Is Nothing (this shouldn't actually happen) !")
             Exit Sub
         End If
-        errStr = RAddin.startRprocess()
+        errStr = RAddin.startRprocess(runShell)
         If errStr <> "" Then MsgBox(errStr)
     End Sub
 
+    Public Sub startRprocessShell(control As ExcelDna.Integration.CustomUI.IRibbonControl)
+        startRprocess(True)
+    End Sub
+
+    Public Sub startRprocessRdotNet(control As ExcelDna.Integration.CustomUI.IRibbonControl)
+        startRprocess(False)
+    End Sub
 
     Public Sub refreshRdefs(control As ExcelDna.Integration.CustomUI.IRibbonControl)
         Dim errStr As String
@@ -629,10 +723,16 @@ Public Class MyRibbon
     End Function
 
     Public Sub selectItem(control As ExcelDna.Integration.CustomUI.IRibbonControl, id As String, index As Integer)
+        Dim errStr As String
+        errStr = RAddin.startRdefRefresh()
+        If errStr <> vbNullString Then
+            MsgBox(errStr)
+        End If
         RAddin.Rdefinitions = Rcalldefs(index)
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()
     End Sub
+
     Public Sub ribbonLoaded(myribbon As ExcelDna.Integration.CustomUI.IRibbonUI)
         RAddin.theRibbon = myribbon
     End Sub
