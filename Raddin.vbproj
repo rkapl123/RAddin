@@ -92,6 +92,8 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddInEvents.vb" />
+    <Compile Include="RAddinRibbon.vb" />
     <Compile Include="RAddin.vb" />
   </ItemGroup>
   <ItemGroup>

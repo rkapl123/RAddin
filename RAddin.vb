@@ -1,9 +1,6 @@
 ﻿Imports Microsoft.Office.Interop.Excel
-Imports ExcelDna.Integration
 Imports System.IO
-Imports System.Runtime.InteropServices
 Imports System.Configuration
-Imports ExcelDna.Integration.CustomUI
 Imports RDotNet
 Imports RDotNet.NativeLibrary
 
@@ -372,7 +369,7 @@ Public Module RAddin
         Else ' RDotNet invocation
             errStr = initializeRDotNet()
             If errStr <> vbNullString Then Return "initializing RdotNet returned error: " + errStr
-            errStr = prepareRunAndGetResults()
+            errStr = prepareParamsInvokeScriptsAndGetResults()
             If errStr <> vbNullString Then Return "TestRDotNet returned error: " + errStr
         End If
         ' all is OK = return nullstring
@@ -383,9 +380,10 @@ Public Module RAddin
     Private Function initializeRDotNet() As String
         Dim logInfo As String = vbNullString
         Try
-            REngine.SetEnvironmentVariables(rPath:=rpath)
+            Dim fullrpath As String = rpath + IIf(rpath.EndsWith("\"), "", "\") + IIf(System.Environment.Is64BitProcess, ConfigurationManager.AppSettings("rPath64bit"), ConfigurationManager.AppSettings("rPath32bit"))
             Dim rHome As String = vbNullString
-            logInfo = NativeUtility.FindRPaths(rpath, rHome) + ",Is64BitProcess:" + System.Environment.Is64BitProcess.ToString()
+            logInfo = NativeUtility.FindRPaths(fullrpath, rHome) + ", Is64BitProcess: " + System.Environment.Is64BitProcess.ToString()
+            REngine.SetEnvironmentVariables(rPath:=fullrpath)
             rdotnetengine = REngine.GetInstance()
             rdotnetengine.Initialize()
         Catch ex As Exception
@@ -395,7 +393,7 @@ Public Module RAddin
     End Function
 
     ' prepare arguments for rdotnet, run scripts and return results to excel
-    Private Function prepareRunAndGetResults() As String
+    Private Function prepareParamsInvokeScriptsAndGetResults() As String
 
         ' First import arguments...
         For c As Integer = 0 To RdefDic("args").Length - 1
@@ -404,32 +402,32 @@ Public Module RAddin
             Dim posWSseparator = InStr(argname, "!")
             If posWSseparator > 0 Then argname = argname.Substring(posWSseparator)
             Dim RDataRange As Range = currWb.Names.Item(RdefDic("args")(c)).RefersToRange
-            Dim targetArg As RDotNet.DataFrame = Nothing
+            Dim dfDataColumns() As IEnumerable
+            ReDim dfDataColumns(RDataRange.Columns.Count - 1)
+
             Try
-                ' write the RDataRange to RdotNet
-                Dim i As Integer = 1
+                ' write the RDataRange to dfDataColumns
+                Dim j As Integer = 1
                 Do
-                    Dim j As Integer = 1
-                    If RDataRange(i, 1).Value2 IsNot Nothing Then
-                        Do
-                            If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
-                                targetArg(i, j) = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
-                            ElseIf IsNumeric(RDataRange(i, j).Value2) Then
-                                targetArg(i, j) = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
-                            Else
-                                targetArg(i, j) = RDataRange(i, j).Value2
-                            End If
-                            j = j + 1
-                        Loop Until j > RDataRange.Columns.Count
-                    End If
-                    i = i + 1
-                Loop Until i > RDataRange.Rows.Count
+                    Dim columnValues(RDataRange.Rows.Count) As String
+                    Dim i As Integer = 1
+                    Do
+                        If RDataRange(i, 1).Value2 IsNot Nothing Then
+                            columnValues(i) = RDataRange(i, j).Value2
+                        End If
+                        i = i + 1
+                    Loop Until i > RDataRange.Rows.Count
+                    dfDataColumns(j - 1) = columnValues
+                    j = j + 1
+                Loop Until j > RDataRange.Columns.Count
+                ' write the dfDataColumns to rdotnet dataframe
+                Dim targetArg As RDotNet.DataFrame = rdotnetengine.CreateDataFrame(dfDataColumns)
+                ' set the symbol to the correct name
                 rdotnetengine.SetSymbol(argname, targetArg)
             Catch ex As Exception
                 Return "Error occured when creating RdotNet arg '" + argname + "', " + ex.Message
             End Try
         Next
-
         ' then evaluate excel stored scripts
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Dim scriptText As String = Nothing
@@ -469,11 +467,11 @@ Public Module RAddin
 
         ' then evaluate filesystem stored scripts
         Dim scriptpath As String = dirglobal
-        For c As Integer = 0 To RdefDic("args").Length - 1
+        For c As Integer = 0 To RdefDic("scripts").Length - 1
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
             Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
 
-            Dim scriptname As String = RdefDic("args")(c)
+            Dim scriptname As String = RdefDic("scripts")(c)
             Try
                 rdotnetengine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
             Catch ex As Exception
@@ -482,13 +480,59 @@ Public Module RAddin
         Next
 
         ' then evaluate (return) resultnames
-        For c As Integer = 0 To RdefDic("res").Length - 1
-            Dim resname As String = RdefDic("res")(c)
+        For c As Integer = 0 To RdefDic("results").Length - 1
+            Dim resname As String = RdefDic("results")(c)
+            ' if argvalue refers to a WS Name, cut off WS name prefix for R argname...
+            Dim posWSseparator = InStr(resname, "!")
+            If posWSseparator > 0 Then resname = resname.Substring(posWSseparator)
+
+            ' first get data from RdotNet engine
+            Dim resultDataSymbolicExpr As SymbolicExpression
+            Dim resultData As Object = Nothing
+            Dim columnCount As Integer : Dim rowCount As Integer
             Try
-                rdotnetengine.Evaluate(resname)
+                resultDataSymbolicExpr = rdotnetengine.Evaluate(resname)
+                If resultDataSymbolicExpr.IsDataFrame() Then
+                    resultData = resultDataSymbolicExpr.AsDataFrame()
+                    columnCount = resultDataSymbolicExpr.AsDataFrame().ColumnCount
+                    rowCount = resultDataSymbolicExpr.AsDataFrame().RowCount
+                ElseIf resultDataSymbolicExpr.IsMatrix() Then
+                    resultData = resultDataSymbolicExpr.AsRawMatrix()
+                    columnCount = resultDataSymbolicExpr.AsRawMatrix().ColumnCount
+                    rowCount = resultDataSymbolicExpr.AsRawMatrix().RowCount
+                ElseIf resultDataSymbolicExpr.IsVector() Then
+                    resultData = resultDataSymbolicExpr.AsRaw()
+                    columnCount = 1
+                    rowCount = resultDataSymbolicExpr.AsRaw().Count()
+                ElseIf resultDataSymbolicExpr.IsList() Then
+                    resultData = resultDataSymbolicExpr.AsList()
+                    columnCount = 1
+                    rowCount = resultDataSymbolicExpr.AsList().Count()
+                End If
+
             Catch ex As Exception
                 Return "Error occured when evaluating result '" + resname + "', " + ex.Message
             End Try
+
+            ' then put data into excel range
+            Dim RDataRange As Range = currWb.Names.Item(RdefDic("results")(c)).RefersToRange
+            Dim i As Integer = 0
+            Do
+                If columnCount = 1 Then
+                    RDataRange(i + 1, 1).Value2 = resultData(i)
+                Else
+                    Dim j As Integer = 0
+                    Do
+                        Try
+                            RDataRange(i + 1, j + 1).Value2 = resultData(i, j)
+                        Catch ex As Exception
+                            Return "Error occured when putting result '" + resname + "', " + ex.Message
+                        End Try
+                        j = j + 1
+                    Loop Until j > columnCount - 1
+                End If
+                i = i + 1
+            Loop Until i > rowCount - 1
         Next
 
         Return vbNullString
@@ -594,12 +638,12 @@ Public Module RAddin
             Next
             ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
-                If rexec Is Nothing Then rexec = ConfigurationManager.AppSettings("ExePath").ToString()
+                If rexec Is Nothing Then rexec = ConfigurationManager.AppSettings("ExePath")
             Catch ex As Exception
             End Try
             ' get default Rpath from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
-                If rpath Is Nothing Then rpath = ConfigurationManager.AppSettings("RPath").ToString()
+                If rpath Is Nothing Then rpath = ConfigurationManager.AppSettings("rPath")
             Catch ex As Exception
             End Try
             If rexec Is Nothing And rpath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath defined"
@@ -609,132 +653,4 @@ Public Module RAddin
         End Try
         Return vbNullString
     End Function
-
 End Module
-
-' Events from Excel (Workbook_Save ...)
-Public Class AddIn
-    Implements IExcelAddIn
-
-    WithEvents Application As Application
-
-    ' connect to Excel when opening Addin
-    Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
-        Application = ExcelDnaUtil.Application
-    End Sub
-
-    'has to be implemented
-    Public Sub AutoClose() Implements IExcelAddIn.AutoClose
-        If RAddin.rdotnetengine IsNot Nothing Then RAddin.rdotnetengine.Dispose()
-    End Sub
-
-    Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
-        Dim errStr As String
-        errStr = doDefinitions(Wb)
-        If errStr = "no RNames" Then Exit Sub
-        If errStr <> vbNullString Then
-            MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
-            Exit Sub
-        End If
-        errStr = RAddin.storeArgs()
-        If errStr <> "" Then MsgBox("Error when saving inputfiles in Workbook_Save: " + errStr)
-    End Sub
-
-    Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
-        ' is being treated in Workbook_Activate...
-    End Sub
-
-    Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
-        Dim errStr As String
-        errStr = doDefinitions(Wb)
-        If errStr = "no RNames" Then Exit Sub
-        If errStr <> vbNullString Then
-            MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
-            Exit Sub
-        End If
-        RAddin.theRibbon.Invalidate()
-    End Sub
-
-    Private Function doDefinitions(Wb As Workbook) As String
-        Dim errStr As String
-        currWb = Wb
-        ' always reset Rdefinitions when changing Workbooks (may not be the current one, if saved programmatically!), otherwise this is not being refilled in getRNames
-        Rdefinitions = Nothing
-        ' get the defined R_Addin Names
-        errStr = RAddin.getRNames()
-        If errStr = "no RNames" Then Return errStr
-        If errStr <> vbNullString Then
-            Return "Error while getRNames in doDefinitions: " + errStr
-        End If
-        ' get the definitions from the current defined range (first name in R_Addin Names)
-        errStr = RAddin.getRDefinitions()
-        If errStr <> vbNullString Then Return "Error while getRdefinitions in doDefinitions: " + errStr
-        Return vbNullString
-    End Function
-End Class
-
-' Events from Ribbon
-<ComVisible(True)>
-Public Class MyRibbon
-    Inherits ExcelRibbon
-
-    Private Sub startRprocess(runShell As Boolean)
-        Dim errStr As String
-        If UBound(Rcalldefnames) = -1 Then
-            MsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
-            Exit Sub
-        End If
-        If RAddin.Rdefinitions Is Nothing Then
-            MsgBox("Rdefinitions Is Nothing (this shouldn't actually happen) !")
-            Exit Sub
-        End If
-        errStr = RAddin.startRprocess(runShell)
-        If errStr <> "" Then MsgBox(errStr)
-    End Sub
-
-    Public Sub startRprocessShell(control As ExcelDna.Integration.CustomUI.IRibbonControl)
-        startRprocess(True)
-    End Sub
-
-    Public Sub startRprocessRdotNet(control As ExcelDna.Integration.CustomUI.IRibbonControl)
-        startRprocess(False)
-    End Sub
-
-    Public Sub refreshRdefs(control As ExcelDna.Integration.CustomUI.IRibbonControl)
-        Dim errStr As String
-        errStr = RAddin.startRdefRefresh()
-        If errStr <> vbNullString Then
-            MsgBox(errStr)
-        Else
-            MsgBox("refreshed Rdefinitions from current Workbook !")
-        End If
-    End Sub
-
-    Public Function GetItemCount(control As ExcelDna.Integration.CustomUI.IRibbonControl) As Integer
-        Return (RAddin.Rcalldefnames.Length)
-    End Function
-
-    Public Function GetItemLabel(control As ExcelDna.Integration.CustomUI.IRibbonControl, index As Integer) As String
-        Return RAddin.Rcalldefnames(index)
-    End Function
-
-    Public Function GetItemID(control As ExcelDna.Integration.CustomUI.IRibbonControl, index As Integer) As String
-        Return RAddin.Rcalldefnames(index)
-    End Function
-
-    Public Sub selectItem(control As ExcelDna.Integration.CustomUI.IRibbonControl, id As String, index As Integer)
-        Dim errStr As String
-        errStr = RAddin.startRdefRefresh()
-        If errStr <> vbNullString Then
-            MsgBox(errStr)
-        End If
-        RAddin.Rdefinitions = Rcalldefs(index)
-        RAddin.Rdefinitions.Parent.Select()
-        RAddin.Rdefinitions.Select()
-    End Sub
-
-    Public Sub ribbonLoaded(myribbon As ExcelDna.Integration.CustomUI.IRibbonUI)
-        RAddin.theRibbon = myribbon
-    End Sub
-
-End Class
