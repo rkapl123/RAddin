@@ -7,6 +7,7 @@ Public Class RAddinRibbon
     Inherits ExcelRibbon
 
     Public runShell As Boolean
+    Public rdefsheetColl As Collection = Nothing
 
     Public Sub startRprocess(control As IRibbonControl)
         Dim errStr As String
@@ -78,13 +79,43 @@ Public Class RAddinRibbon
     End Sub
 
     Public Overrides Function GetCustomUI(RibbonID As String) As String
-        Dim customUIXml As String = "<customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui' loadImage='LoadImage' onLoad='ribbonLoaded' ><ribbon><tabs><tab id='RaddinTab' label='R Addin'>" + _
-            "<group id='RaddinGroup' label='Run defined R-Scripts'>" + _
-              "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" + _
-              "<toggleButton id='Button1' getLabel='getToggleLabel' onAction='toggleRunScript' image='M' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files or RdotNet' supertip='toggles whether to run R script via Shell/Files or RdotNet' />" + _
-              "<button id='Button2' label='run Rdefinion' image='M' size='normal' onAction='startRprocess' tag='2' screentip='run R script from dropdown' supertip='runs R script defined in corresponding range R_Addin' />" + _
-              "<dialogBoxLauncher><button id='Button3' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip='refresh Rdefinitions from current Workbook and get Info about RAddin' supertip='refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)' /></dialogBoxLauncher>" + _
-            "</group></tab></tabs></ribbon></customUI>"
+        Dim customUIXml As String = "<customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui' onLoad='ribbonLoaded' ><ribbon><tabs><tab id='RaddinTab' label='R Addin'>" +
+            "<group id='RaddinGroup' label='General settings'>" +
+              "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" +
+              "<toggleButton id='Button1' getLabel='getToggleLabel' onAction='toggleRunScript' imageMso='ControlToggleButton' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files or RdotNet' supertip='toggles whether to run R script via Shell/Files or RdotNet' />" +
+              "<button id='Button2' label='run Rdefinition' imageMso='SourceControlRun' size='normal' onAction='startRprocess' tag='2' screentip='run R script from dropdown' supertip='runs R script defined in corresponding range R_Addin' />" +
+              "<dialogBoxLauncher><button id='Button3' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip='refresh Rdefinitions from current Workbook and get Info about RAddin' supertip='refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)' /></dialogBoxLauncher></group>" +
+              "<group id='RscriptsGroup' label='Run defined R-Scripts'>"
+
+        For i As Integer = 0 To 8
+            customUIXml = customUIXml + "<dynamicMenu id='id" + i.ToString() + "' " +
+                                            "size='large' label='sheet " + i.ToString() + "' imageMso='SignatureLineInsert' " +
+                                            "screentip='Select script to run' " +
+                                            "getContent='getDynMenContent'/>"
+        Next
+        'If Not rdefsheetColl.Contains(RAddin.Rcalldefsheets(i)) Then
+        '        ' add dynamic menu
+
+        '        Dim scriptColl As Collection = New Collection()
+        '        scriptColl.Add(i, Rcalldefnodenames(i))
+        '        rdefsheetColl.Add(scriptColl, RAddin.Rcalldefsheets(i))
+        '    Else
+        '        ' add rdefinition to existing dynamic menu
+        '        Dim scriptColl As Collection
+        '        scriptColl = rdefsheetColl(RAddin.Rcalldefsheets(i))
+        '        scriptColl.Add(i, Rcalldefnodenames(i))
+        '        rdefsheetColl.Add(scriptColl, RAddin.Rcalldefsheets(i))
+        '    End If
+
+        customUIXml = customUIXml + "</group></tab></tabs></ribbon></customUI>"
         Return customUIXml
     End Function
+
+    Public Function getDynMenContent(control As IRibbonControl) As String
+        Dim xmlString As String = "<menu xmlns='http://schemas.microsoft.com/office/2009/07/customui'>" +
+        "<button id='Button2' label='run Rdefinition' imageMso='SignatureLineInsert' onAction='startRprocess' tag='2' screentip='run R script from dropdown' supertip='runs R script defined in corresponding range R_Addin' />" +
+        "</menu>"
+        Return xmlString
+    End Function
+
 End Class

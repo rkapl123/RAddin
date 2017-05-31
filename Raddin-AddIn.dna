@@ -20,24 +20,4 @@
        Excel-DNA also allows the xml for ribbon UI extensions to be specified in the .dna file.
        See the main Excel-DNA site at http://excel-dna.net for downloads of the full distribution.
   -->
-  <CustomUI>
-    <!-- Inside here is the exact RibbonX xml passed to Excel -->
-    <!-- This will only be loaded for Excel 2010 because of the namespace -->
-    <customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui' loadImage='LoadImage' onLoad='ribbonLoaded'>
-      <ribbon>
-        <tabs>
-          <tab id='RaddinTab' label='R Addin'>
-            <group id='RaddinGroup' label='Run defined R-Scripts'>
-              <dropDown id='scriptDropDown' label ='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount'  getItemID='GetItemID'  getItemLabel='GetItemLabel' onAction='selectItem' />
-              <toggleButton id='Button1' getLabel='getToggleLabel' onAction='toggleRunScript' image='M' size='normal' tag='1' screentip="toggles whether to run R script via Shell/Files or RdotNet" supertip="toggles whether to run R script via Shell/Files or RdotNet" />
-              <button id='Button2' label='run Rdefinion' image='M' size='normal' onAction='startRprocess' tag='2' screentip="run R script from dropdown" supertip="runs R script defined in corresponding range R_Addin" />
-              <dialogBoxLauncher>
-                <button id='Button3' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip="refresh Rdefinitions from current Workbook and get Info about RAddin" supertip="refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)" />
-              </dialogBoxLauncher>
-            </group >
-          </tab>
-        </tabs>
-      </ribbon>
-    </customUI>
-  </CustomUI>
 </DnaLibrary>

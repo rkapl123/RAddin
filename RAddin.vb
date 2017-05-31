@@ -11,6 +11,8 @@ Public Module RAddin
     Public Rdefinitions As Range
     Public Rcalldefnames As String() = {}
     Public Rcalldefs As Range() = {}
+    Public Rcalldefsheets As String() = {}
+    Public Rcalldefnodenames As String() = {}
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
     Public rexec As String
     Public rpath As String
@@ -556,13 +558,17 @@ Public Module RAddin
     ' gets defined named ranges for R script invocation in the current workbook 
     Public Function getRNames() As String
         ReDim Preserve Rcalldefnames(-1)
+        ReDim Preserve Rcalldefnodenames(-1)
         ReDim Preserve Rcalldefs(-1)
+        ReDim Preserve Rcalldefsheets(-1)
         For Each namedrange As Name In currWb.Names
             Dim cleanname As String = Replace(namedrange.Name, namedrange.Parent.Name & "!", "")
             If Left(cleanname, 7) = "R_Addin" Then
                 If namedrange.RefersToRange.Columns.Count <> 3 Then Return "Rdefinitions range " + namedrange.Parent.name + "!" + namedrange.Name + " doesn't have 3 columns !"
                 ' final name of entry is without R_Addin and !
                 Dim finalname As String = Replace(Replace(namedrange.Name, "R_Addin", ""), "!", "")
+                Dim nodeName As String = Replace(Replace(namedrange.Name, "R_Addin", ""), namedrange.Parent.Name & "!", "")
+                If nodeName = "" Then nodeName = "MainScript"
                 ' first definition as standard definition (works without selecting a Rdefinition)
                 If Rdefinitions Is Nothing Then Rdefinitions = namedrange.RefersToRange
                 If Not InStr(namedrange.Name, "!") > 0 Then
@@ -570,8 +576,12 @@ Public Module RAddin
                 End If
                 ReDim Preserve Rcalldefnames(Rcalldefnames.Length)
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
+                ReDim Preserve Rcalldefsheets(Rcalldefsheets.Length)
+                ReDim Preserve Rcalldefnodenames(Rcalldefnodenames.Length)
                 Rcalldefnames(Rcalldefnames.Length - 1) = finalname
                 Rcalldefs(Rcalldefs.Length - 1) = namedrange.RefersToRange
+                Rcalldefsheets(Rcalldefsheets.Length - 1) = namedrange.Parent.Name
+                Rcalldefnodenames(Rcalldefnodenames.Length - 1) = nodeName
             End If
         Next
         If UBound(Rcalldefnames) = -1 Then Return "no RNames"
