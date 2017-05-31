@@ -63,38 +63,38 @@ Public Module RAddin
                     File.Delete(curWbPrefix + argdir + "\" + argFilename)
                 End If
 
-                outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
+1:              outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
-                customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
-                customCulture.NumberFormat.NumberDecimalSeparator = "."
-                System.Threading.Thread.CurrentThread.CurrentCulture = customCulture
+2:              customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
+3:              customCulture.NumberFormat.NumberDecimalSeparator = "."
+4:              System.Threading.Thread.CurrentThread.CurrentCulture = customCulture
 
                 ' write the RDataRange to file
                 Dim i As Integer = 1
                 Do
                     Dim j As Integer = 1
                     Dim writtenLine As String = ""
-                    If RDataRange(i, 1).Value2 IsNot Nothing Then
+5:                  If RDataRange(i, 1).Value2 IsNot Nothing Then
                         Do
                             Dim printedValue As String
-                            If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
-                                printedValue = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+6:                          If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
+7:                              printedValue = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
                             ElseIf IsNumeric(RDataRange(i, j).Value2) Then
-                                printedValue = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
+8:                              printedValue = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
                             Else
-                                printedValue = RDataRange(i, j).Value2
+9:                              printedValue = RDataRange(i, j).Value2
                             End If
                             writtenLine = writtenLine + printedValue + vbTab
                             j = j + 1
                         Loop Until j > RDataRange.Columns.Count
-                        outputFile.WriteLine(Left(writtenLine, Len(writtenLine) - 1))
+10:                     outputFile.WriteLine(Left(writtenLine, Len(writtenLine) - 1))
                     End If
                     i = i + 1
-                Loop Until i > RDataRange.Rows.Count
+11:             Loop Until i > RDataRange.Rows.Count
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
-                Return "Error occured when creating inputfile '" + argFilename + "', " + ex.Message
+                Return "Error occured when creating inputfile '" + argFilename + "', " + ex.Message + "Err Line" + Err.Erl
             End Try
             If outputFile IsNot Nothing Then outputFile.Close()
         Next

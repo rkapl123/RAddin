@@ -29,10 +29,10 @@
           <tab id='RaddinTab' label='R Addin'>
             <group id='RaddinGroup' label='Run defined R-Scripts'>
               <dropDown id='scriptDropDown' label ='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount'  getItemID='GetItemID'  getItemLabel='GetItemLabel' onAction='selectItem' />
-              <button id='Button1' label='run Rdefinion/shell' image='M' size='normal' onAction='startRprocessShell' tag='1' screentip="run R script from dropdown via Shell/Files" supertip="runs R script defined in corresponding range R_Addin via Shell/Files" />
-              <button id='Button2' label='run Rdefinion/RdotNet' image='M' size='normal' onAction='startRprocessRdotNet' tag='2' screentip="run R script from dropdown via RdotNet" supertip="runs R script defined in corresponding range R_Addin via RdotNet" />
+              <toggleButton id='Button1' getLabel='getToggleLabel' onAction='toggleRunScript' image='M' size='normal' tag='1' screentip="toggles whether to run R script via Shell/Files or RdotNet" supertip="toggles whether to run R script via Shell/Files or RdotNet" />
+              <button id='Button2' label='run Rdefinion' image='M' size='normal' onAction='startRprocess' tag='2' screentip="run R script from dropdown" supertip="runs R script defined in corresponding range R_Addin" />
               <dialogBoxLauncher>
-                <button id='Button3' label='refresh Rdefinitions' onAction='refreshRdefs' tag='3' screentip="refresh Rdefinitions from current Workbook" supertip="refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin" />
+                <button id='Button3' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip="refresh Rdefinitions from current Workbook and get Info about RAddin" supertip="refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)" />
               </dialogBoxLauncher>
             </group >
           </tab>
