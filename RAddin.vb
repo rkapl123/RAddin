@@ -11,8 +11,8 @@ Public Module RAddin
     Public Rdefinitions As Range
     Public Rcalldefnames As String() = {}
     Public Rcalldefs As Range() = {}
-    Public Rcalldefsheets As String() = {}
-    Public Rcalldefnodenames As String() = {}
+    Public rdefsheetColl As Dictionary(Of String, Dictionary(Of String, Range))
+    Public rdefsheetMap As Dictionary(Of String, String)
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
     Public rexec As String
     Public rpath As String
@@ -61,8 +61,8 @@ Public Module RAddin
                     If Not myMsgBox(errMsg) Then Return False
                 End If
 
-                    ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
-                    Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+                Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
                 ' remove any existing input files...
                 If File.Exists(curWbPrefix + argdir + "\" + argFilename) Then
                     File.Delete(curWbPrefix + argdir + "\" + argFilename)
@@ -201,7 +201,7 @@ Public Module RAddin
                 cmd.Start()
                 cmd.WaitForExit()
                 If RdefDic("debug")(c) And rexec <> "cmd" Then
-                    If Not myMsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd()) Then Return False
+                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
                 End If
             Catch ex As Exception
                 If Not myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
@@ -363,7 +363,7 @@ Public Module RAddin
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     ' startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Public Function startRprocess(runShell As Boolean) As String
+    Public Function startRprocess(runShell As Boolean, runRdotNet As Boolean) As String
         Dim errStr As String
         avoidFurtherMsgBoxes = False
         ' get the definition range
@@ -371,19 +371,24 @@ Public Module RAddin
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
         If runShell Then ' shell invocation
             Try
-                If Not removeFiles() Then Return "cancelled shell Rdefinitions run"
-                If Not storeArgs() Then Return "cancelled shell Rdefinitions run"
-                If Not storeScriptRng() Then Return "cancelled shell Rdefinitions run"
-                If Not invokeScripts() Then Return "cancelled shell Rdefinitions run"
-                If Not getResults() Then Return "cancelled shell Rdefinitions run"
-                If Not getDiags() Then Return "cancelled shell Rdefinitions run"
+                If Not removeFiles() Then Return vbNullString
+                If Not storeArgs() Then Return vbNullString
+                If Not storeScriptRng() Then Return vbNullString
+                If Not invokeScripts() Then Return vbNullString
+                If Not getResults() Then Return vbNullString
+                If Not getDiags() Then Return vbNullString
             Catch ex As Exception
-                Return "Exception in shell Rdefinitions run: " + ex.Message
+                Return "Exception in shell Rdefinitions run: " + ex.Message + ex.StackTrace
             End Try
-        Else ' RDotNet invocation 
-            errStr = initializeRDotNet()
-            If errStr <> vbNullString Then Return "initializing RdotNet returned error: " + errStr
-            If Not prepareParamsInvokeScriptsAndGetResults() Then Return "cancelled RdotNet Rdefinitions run"
+        End If
+        If runRdotNet Then ' RDotNet invocation
+            Try
+                errStr = initializeRDotNet()
+                If errStr <> vbNullString Then Return "initializing RdotNet returned error: " + errStr
+                If Not prepareParamsInvokeScriptsAndGetResults() Then Return vbNullString
+            Catch ex As Exception
+                Return "Exception in RdotNet Rdefinitions run: " + ex.Message + ex.StackTrace
+            End Try
         End If
         ' all is OK = return nullstring
         Return vbNullString
@@ -560,7 +565,7 @@ Public Module RAddin
         Return vbNullString
     End Function
 
-    Public Function startRdefRefresh() As String
+    Public Function startRnamesRefresh() As String
         Dim errStr As String
         ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
         Rdefinitions = Nothing
@@ -569,7 +574,7 @@ Public Module RAddin
         If errStr = "no definitions" Then
             Return vbNullString
         ElseIf errStr <> vbNullString Then
-            Return "Error while getRNames in startRdefRefresh: " + errStr
+            Return "Error while getRNames in startRnamesRefresh: " + errStr
         End If
         RAddin.theRibbon.Invalidate()
         Return vbNullString
@@ -578,9 +583,10 @@ Public Module RAddin
     ' gets defined named ranges for R script invocation in the current workbook 
     Public Function getRNames() As String
         ReDim Preserve Rcalldefnames(-1)
-        ReDim Preserve Rcalldefnodenames(-1)
         ReDim Preserve Rcalldefs(-1)
-        ReDim Preserve Rcalldefsheets(-1)
+        rdefsheetColl = New Dictionary(Of String, Dictionary(Of String, Range))
+        rdefsheetMap = New Dictionary(Of String, String)
+        Dim i As Integer = 0
         For Each namedrange As Name In currWb.Names
             Dim cleanname As String = Replace(namedrange.Name, namedrange.Parent.Name & "!", "")
             If Left(cleanname, 7) = "R_Addin" Then
@@ -596,12 +602,21 @@ Public Module RAddin
                 End If
                 ReDim Preserve Rcalldefnames(Rcalldefnames.Length)
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
-                ReDim Preserve Rcalldefsheets(Rcalldefsheets.Length)
-                ReDim Preserve Rcalldefnodenames(Rcalldefnodenames.Length)
                 Rcalldefnames(Rcalldefnames.Length - 1) = finalname
                 Rcalldefs(Rcalldefs.Length - 1) = namedrange.RefersToRange
-                Rcalldefsheets(Rcalldefsheets.Length - 1) = namedrange.Parent.Name
-                Rcalldefnodenames(Rcalldefnodenames.Length - 1) = nodeName
+                If Not rdefsheetColl.ContainsKey(namedrange.Parent.Name) Then
+                    ' add to new sheet "menu"
+                    Dim scriptColl As Dictionary(Of String, Range) = New Dictionary(Of String, Range)
+                    scriptColl.Add(nodeName, namedrange.RefersToRange)
+                    rdefsheetColl.Add(namedrange.Parent.Name, scriptColl)
+                    rdefsheetMap.Add("ID" + i.ToString(), namedrange.Parent.Name)
+                    i = i + 1
+                Else
+                    ' add rdefinition to existing sheet "menu"
+                    Dim scriptColl As Dictionary(Of String, Range)
+                    scriptColl = rdefsheetColl(namedrange.Parent.Name)
+                    scriptColl.Add(nodeName, namedrange.RefersToRange)
+                End If
             End If
         Next
         If UBound(Rcalldefnames) = -1 Then Return "no RNames"

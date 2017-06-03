@@ -7,32 +7,48 @@ Public Class RAddinRibbon
     Inherits ExcelRibbon
 
     Public runShell As Boolean
-    Public rdefsheetColl As Collection = Nothing
+    Public runRdotNet As Boolean
+    Private currentSheet As String
 
     Public Sub startRprocess(control As IRibbonControl)
         Dim errStr As String
-        If UBound(Rcalldefnames) = -1 Then
-            MsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
-            Exit Sub
-        End If
-        If RAddin.Rdefinitions Is Nothing Then
-            MsgBox("Rdefinitions Is Nothing (this shouldn't actually happen) !")
-            Exit Sub
-        End If
-        errStr = RAddin.startRprocess(runShell)
+        ' set Rdefinition to invocaters range...
+        RAddin.Rdefinitions = RAddin.rdefsheetColl(currentSheet).Item(control.Id)
+        RAddin.Rdefinitions.Parent.Select()
+        RAddin.Rdefinitions.Select()
+        errStr = RAddin.startRprocess(runShell, runRdotNet)
         If errStr <> "" Then MsgBox(errStr)
     End Sub
 
     ' reflect the change in the togglebuttons title
-    Public Function getToggleLabel(control As IRibbonControl) As String
-        Return "run via " + IIf(runShell, "Shell", "RdotNet")
+    Public Function getImage(control As IRibbonControl) As String
+        If (runShell And control.Id = "shell") Or (runRdotNet And control.Id = "rdotnet") Then
+            Return "AcceptTask"
+        Else
+            Return "DeclineTask"
+        End If
     End Function
 
-    ' toggle between shell and Rdotnet mode
-    Public Sub toggleRunScript(control As IRibbonControl, pressed As Boolean)
-        runShell = Not pressed
-        ' invalidate to reflect the change in the togglebuttons title
-        RAddin.theRibbon.Invalidate()
+    ' reflect the change in the togglebuttons title
+    Public Function getPressed(control As IRibbonControl) As Boolean
+        If control.Id = "shell" Then
+            Return runShell
+        ElseIf control.Id = "rdotnet" Then
+            Return runRdotNet
+        Else
+            Return False
+        End If
+    End Function
+
+    ' toggle shell or Rdotnet mode buttons
+    Public Sub toggleButton(control As IRibbonControl, pressed As Boolean)
+        If control.Id = "shell" Then
+            runShell = pressed
+        ElseIf control.Id = "rdotnet" Then
+            runRdotNet = pressed
+        End If
+        ' invalidate to reflect the change in the togglebuttons image
+        RAddin.theRibbon.InvalidateControl(control.Id)
     End Sub
 
     Public Sub refreshRdefs(control As IRibbonControl)
@@ -44,11 +60,15 @@ Public Class RAddinRibbon
             End If
         Next
         Dim errStr As String
-        errStr = RAddin.startRdefRefresh()
+        errStr = RAddin.startRnamesRefresh()
         If errStr <> vbNullString Then
             MsgBox(sModuleInfo & vbCrLf & vbCrLf & "refresh Error: " & errStr)
         Else
-            MsgBox(sModuleInfo & vbCrLf & vbCrLf & "refreshed Rdefinitions from current Workbook !")
+            If UBound(Rcalldefnames) = -1 Then
+                MsgBox(sModuleInfo & vbCrLf & vbCrLf & "no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
+            Else
+                MsgBox(sModuleInfo & vbCrLf & vbCrLf & "refreshed Rnames from current Workbook !")
+            End If
         End If
     End Sub
 
@@ -72,48 +92,50 @@ Public Class RAddinRibbon
 
     Public Sub ribbonLoaded(myribbon As IRibbonUI)
         RAddin.theRibbon = myribbon
-        ' default to run via shell..
+        ' set default run via methods ..
         runShell = True
+        runRdotNet = False
     End Sub
 
+    ' creates the Ribbon
     Public Overrides Function GetCustomUI(RibbonID As String) As String
         Dim customUIXml As String = "<customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui' onLoad='ribbonLoaded' ><ribbon><tabs><tab id='RaddinTab' label='R Addin'>" +
             "<group id='RaddinGroup' label='General settings'>" +
               "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" +
-              "<toggleButton id='Button1' getLabel='getToggleLabel' onAction='toggleRunScript' imageMso='ControlToggleButton' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files or RdotNet' supertip='toggles whether to run R script via Shell/Files or RdotNet' />" +
-              "<button id='Button2' label='run Rdefinition' imageMso='SourceControlRun' size='normal' onAction='startRprocess' tag='2' screentip='run R script from dropdown' supertip='runs R script defined in corresponding range R_Addin' />" +
-              "<dialogBoxLauncher><button id='Button3' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip='refresh Rdefinitions from current Workbook and get Info about RAddin' supertip='refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)' /></dialogBoxLauncher></group>" +
-              "<group id='RscriptsGroup' label='Run defined R-Scripts'>"
+              "<toggleButton id='shell' label='run via shell' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files' supertip='toggles whether to run R script via Shell/Files' />" +
+              "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
+              "<dialogBoxLauncher><button id='dialog' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip='refresh Rdefinitions from current Workbook and get Info about RAddin' supertip='refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)' /></dialogBoxLauncher></group>" +
+              "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
 
-        For i As Integer = 0 To 8
-            customUIXml = customUIXml + "<dynamicMenu id='id" + i.ToString() + "' " +
-                                            "size='large' label='sheet " + i.ToString() + "' imageMso='SignatureLineInsert' " +
+        For i As Integer = 0 To 10
+            customUIXml = customUIXml + "<dynamicMenu id='ID" + i.ToString() + "' " +
+                                            "size='large' getLabel='getSheetLabel' imageMso='SignatureLineInsert' " +
                                             "screentip='Select script to run' " +
-                                            "getContent='getDynMenContent'/>"
+                                            "getContent='getDynMenContent' getVisible='getDynMenVisible'/>"
         Next
-        'If Not rdefsheetColl.Contains(RAddin.Rcalldefsheets(i)) Then
-        '        ' add dynamic menu
-
-        '        Dim scriptColl As Collection = New Collection()
-        '        scriptColl.Add(i, Rcalldefnodenames(i))
-        '        rdefsheetColl.Add(scriptColl, RAddin.Rcalldefsheets(i))
-        '    Else
-        '        ' add rdefinition to existing dynamic menu
-        '        Dim scriptColl As Collection
-        '        scriptColl = rdefsheetColl(RAddin.Rcalldefsheets(i))
-        '        scriptColl.Add(i, Rcalldefnodenames(i))
-        '        rdefsheetColl.Add(scriptColl, RAddin.Rcalldefsheets(i))
-        '    End If
-
         customUIXml = customUIXml + "</group></tab></tabs></ribbon></customUI>"
         Return customUIXml
     End Function
 
+    ' set the name of the WB/sheet dropdown to the sheet name (for the WB dropdown this is the WB name) 
+    Public Function getSheetLabel(control As IRibbonControl) As String
+        getSheetLabel = vbNullString
+        If RAddin.rdefsheetMap.ContainsKey(control.Id) Then getSheetLabel = RAddin.rdefsheetMap(control.Id)
+    End Function
+
+    ' create the buttons in the WB/sheet dropdown
     Public Function getDynMenContent(control As IRibbonControl) As String
-        Dim xmlString As String = "<menu xmlns='http://schemas.microsoft.com/office/2009/07/customui'>" +
-        "<button id='Button2' label='run Rdefinition' imageMso='SignatureLineInsert' onAction='startRprocess' tag='2' screentip='run R script from dropdown' supertip='runs R script defined in corresponding range R_Addin' />" +
-        "</menu>"
+        Dim xmlString As String = "<menu xmlns='http://schemas.microsoft.com/office/2009/07/customui'>"
+        currentSheet = RAddin.rdefsheetMap(control.Id)
+        For Each nodeName As String In RAddin.rdefsheetColl(currentSheet).Keys
+            xmlString = xmlString + "<button id='" + nodeName + "' label='run " + nodeName + "' imageMso='SignatureLineInsert' onAction='startRprocess' screentip='run " + nodeName + " Rdefinition' supertip='runs R script defined in " + nodeName + " R_Addin range' />"
+        Next
+        xmlString = xmlString + "</menu>"
         Return xmlString
     End Function
 
+    ' shows the sheet button only if it was collected...
+    Public Function getDynMenVisible(control As IRibbonControl) As Boolean
+        Return RAddin.rdefsheetMap.ContainsKey(control.Id)
+    End Function
 End Class
