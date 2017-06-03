@@ -16,6 +16,7 @@ Public Module RAddin
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
     Public rexec As String
     Public rpath As String
+    Public avoidFurtherMsgBoxes As Boolean
     Dim dirglobal As String
 
     ' definitions of current R invocation (scripts, args, results, diags...)
@@ -46,7 +47,7 @@ Public Module RAddin
 
     ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd" 
     ' otherwise:  "what you see is what you get"
-    Public Function storeArgs() As String
+    Public Function storeArgs() As Boolean
         Dim argFilename As String = vbNullString, argdir As String
         Dim RDataRange As Range = Nothing
         Dim outputFile As StreamWriter = Nothing
@@ -56,55 +57,57 @@ Public Module RAddin
             Try
                 Dim errMsg As String
                 errMsg = prepareParams(c, "args", RDataRange, argFilename, argdir, ".txt")
-                If Len(errMsg) > 0 Then Return errMsg
+                If Len(errMsg) > 0 Then
+                    If Not myMsgBox(errMsg) Then Return False
+                End If
 
-                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
-                Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
+                    ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+                    Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
                 ' remove any existing input files...
                 If File.Exists(curWbPrefix + argdir + "\" + argFilename) Then
                     File.Delete(curWbPrefix + argdir + "\" + argFilename)
                 End If
 
-1:              outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
+                outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
-2:              customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
-3:              customCulture.NumberFormat.NumberDecimalSeparator = "."
-4:              System.Threading.Thread.CurrentThread.CurrentCulture = customCulture
+                customCulture = System.Threading.Thread.CurrentThread.CurrentCulture.Clone()
+                customCulture.NumberFormat.NumberDecimalSeparator = "."
+                System.Threading.Thread.CurrentThread.CurrentCulture = customCulture
 
                 ' write the RDataRange to file
                 Dim i As Integer = 1
                 Do
                     Dim j As Integer = 1
                     Dim writtenLine As String = ""
-5:                  If RDataRange(i, 1).Value2 IsNot Nothing Then
+                    If RDataRange(i, 1).Value2 IsNot Nothing Then
                         Do
                             Dim printedValue As String
-6:                          If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
-7:                              printedValue = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
+                            If RDataRange(i, j).NumberFormat.ToString().Contains("yy") Then
+                                printedValue = DateTime.FromOADate(RDataRange(i, j).Value2).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
                             ElseIf IsNumeric(RDataRange(i, j).Value2) Then
-8:                              printedValue = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
+                                printedValue = String.Format("{0:###################0.################}", RDataRange(i, j).Value2)
                             Else
-9:                              printedValue = RDataRange(i, j).Value2
+                                printedValue = RDataRange(i, j).Value2
                             End If
                             writtenLine = writtenLine + printedValue + vbTab
                             j = j + 1
                         Loop Until j > RDataRange.Columns.Count
-10:                     outputFile.WriteLine(Left(writtenLine, Len(writtenLine) - 1))
+                        outputFile.WriteLine(Left(writtenLine, Len(writtenLine) - 1))
                     End If
                     i = i + 1
-11:             Loop Until i > RDataRange.Rows.Count
+                Loop Until i > RDataRange.Rows.Count
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
-                Return "Error occured when creating inputfile '" + argFilename + "', " + ex.Message + "Err Line" + Err.Erl
+                If Not myMsgBox("Error occured when creating inputfile '" + argFilename + "', " + ex.Message) Then Return False
             End Try
             If outputFile IsNot Nothing Then outputFile.Close()
         Next
-        Return vbNullString
+        Return True
     End Function
 
     ' creates script files for defined scriptRng ranges 
-    Private Function storeScriptRng() As String
+    Private Function storeScriptRng() As Boolean
         Dim scriptRngFilename As String = vbNullString, scriptRngdir = vbNullString, scriptText = vbNullString
         Dim RDataRange As Range = Nothing
         Dim outputFile As StreamWriter = Nothing
@@ -156,31 +159,33 @@ Public Module RAddin
                 End If
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
-                Return "Error occured when creating script file '" + scriptRngFilename + "', " + ex.Message
+                If Not myMsgBox("Error occured when creating script file '" + scriptRngFilename + "', " + ex.Message) Then Return False
             End Try
             If outputFile IsNot Nothing Then outputFile.Close()
         Next
-        Return vbNullString
+        Return True
     End Function
 
     ' invokes current scripts/args/results definition
-    Private Function invokeScripts() As String
+    Private Function invokeScripts() As Boolean
         Dim script As String = vbNullString
         Dim scriptpath As String
 
         scriptpath = dirglobal
         For c As Integer = 0 To RdefDic("scripts").Length - 1
             Dim ErrMsg As String = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
-            If Len(ErrMsg) > 0 Then Return ErrMsg
+            If Len(ErrMsg) > 0 Then
+                If Not myMsgBox(ErrMsg) Then Return False
+            End If
 
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
-            Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
+                Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + scriptpath
             If Not File.Exists(fullScriptPath + "\" + script) Then
-                Return "Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf
+                If Not myMsgBox("Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf) Then Return False
             End If
             If Not File.Exists(rexec) And rexec <> "cmd" Then
-                Return "Executable '" + rexec + "' not found!" + vbCrLf
+                If Not myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf) Then Return False
             End If
             Try
                 Dim cmd As Process
@@ -196,18 +201,18 @@ Public Module RAddin
                 cmd.Start()
                 cmd.WaitForExit()
                 If RdefDic("debug")(c) And rexec <> "cmd" Then
-                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
+                    If Not myMsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd()) Then Return False
                 End If
             Catch ex As Exception
-                Return "Error occured when invoking script '" + script + "' in path '" + currWb.Path + IIf(Len(scriptpath) > 0, "\" + scriptpath, vbNullString) + "', using '" + rexec + "'" + ex.Message + vbCrLf
+                If Not myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
             End Try
         Next
-        Return vbNullString
+        Return True
     End Function
 
     ' get Outputfiles for defined results ranges, tab separated
     ' otherwise:  "what you see is what you get"
-    Private Function getResults() As String
+    Private Function getResults() As Boolean
         Dim resFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
         Dim errMsg As String = vbNullString
@@ -215,27 +220,29 @@ Public Module RAddin
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("results").Length - 1
             errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
-            If Len(errMsg) > 0 Then Return errMsg
+            If Len(errMsg) > 0 Then
+                If Not myMsgBox(errMsg) Then Return False
+            End If
 
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
-            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
+                Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             Dim infile As StreamReader = Nothing
             Try
                 infile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
             Catch ex As Exception
-                Return "Error occured in getResults when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message
+                If Not myMsgBox("Error occured in getResults when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message) Then Return False
             End Try
 
             ' parse the actual file line by line
-            Dim i As Integer = 1, currentRecord As String(), currentLine As String
+            Dim i As Integer = 1, currentRecord As String() = Nothing, currentLine As String
             RDataRange.ClearContents()
             Do While Not infile.EndOfStream
                 Try
                     currentLine = infile.ReadLine
                     currentRecord = currentLine.Split(vbTab)
-                Catch ex As FileIO.MalformedLineException
+                Catch ex As Exception
                     If infile IsNot Nothing Then infile.Close()
-                    Return "Error occured in getResults when parsing file '" + resFilename + "', " + ex.Message
+                    If Not myMsgBox("Error occured in getResults when parsing file '" + resFilename + "', " + ex.Message) Then Return False
                 End Try
                 ' Put parsed data into target range column by column
                 For j = 1 To currentRecord.Count()
@@ -243,18 +250,18 @@ Public Module RAddin
                         RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
                     Catch ex As Exception
                         If infile IsNot Nothing Then infile.Close()
-                        Return "Error occured in getResults when writing data into '" + RDataRange.Parent.name + "!" + RDataRange.Address + "', " + ex.Message
+                        If Not myMsgBox("Error occured in getResults when writing data into '" + RDataRange.Parent.name + "!" + RDataRange.Address + "', " + ex.Message) Then Return False
                     End Try
                 Next
                 i = i + 1
             Loop
             If infile IsNot Nothing Then infile.Close()
         Next
-        Return vbNullString
+        Return True
     End Function
 
     ' get Output diagrams (png) for defined diags ranges
-    Private Function getDiags() As String
+    Private Function getDiags() As Boolean
         Dim diagFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
         Dim errMsg As String = vbNullString
@@ -262,10 +269,12 @@ Public Module RAddin
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("diags").Length - 1
             errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
-            If Len(errMsg) > 0 Then Return errMsg
+            If Len(errMsg) > 0 Then
+                If Not myMsgBox(errMsg) Then Return False
+            End If
 
-            ' clean previously set shapes...
-            For Each oldShape As Shape In RDataRange.Worksheet.Shapes
+                ' clean previously set shapes...
+                For Each oldShape As Shape In RDataRange.Worksheet.Shapes
                 If oldShape.Name = diagFilename Then
                     oldShape.Delete()
                     Exit For
@@ -280,14 +289,14 @@ Public Module RAddin
                     .Name = diagFilename
                 End With
             Catch ex As Exception
-                Return "Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message
+                If Not myMsgBox("Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message) Then Return False
             End Try
         Next
-        Return vbNullString
+        Return True
     End Function
 
     ' remove result, diagram and temporary R script files
-    Private Function removeFiles() As String
+    Private Function removeFiles() As Boolean
         Dim filename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
         Dim errMsg As String = vbNullString
@@ -296,32 +305,36 @@ Public Module RAddin
         ' remove result files
         For c As Integer = 0 To RdefDic("results").Length - 1
             errMsg = prepareParams(c, "results", RDataRange, filename, readdir, ".txt")
-            If Len(errMsg) > 0 Then Return errMsg
+            If Len(errMsg) > 0 Then
+                If Not myMsgBox(errMsg) Then Return False
+            End If
 
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
-            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+                Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing result files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
                     File.Delete(curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
-                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
+                    If Not myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
                 End Try
             End If
         Next
         ' remove diagram files
         For c As Integer = 0 To RdefDic("diags").Length - 1
             errMsg = prepareParams(c, "diags", RDataRange, filename, readdir, ".png")
-            If Len(errMsg) > 0 Then Return errMsg
+            If Len(errMsg) > 0 Then
+                If Not myMsgBox(errMsg) Then Return False
+            End If
 
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
-            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+                ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+                Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             ' remove any existing diagram files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
                     File.Delete(curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
-                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
+                    If Not myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
                 End Try
             End If
         Next
@@ -339,11 +352,11 @@ Public Module RAddin
                 Try
                     File.Delete(curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
-                    Return "Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message
+                    If Not myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
                 End Try
             End If
         Next
-        Return vbNullString
+        Return True
     End Function
 
 
@@ -352,30 +365,36 @@ Public Module RAddin
     '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     Public Function startRprocess(runShell As Boolean) As String
         Dim errStr As String
+        avoidFurtherMsgBoxes = False
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
         If runShell Then ' shell invocation
-            errStr = removeFiles()
-            If errStr <> vbNullString Then Return "removing files returned error: " + errStr
-            errStr = storeArgs()
-            If errStr <> vbNullString Then Return "storing input files returned error: " + errStr
-            errStr = storeScriptRng()
-            If errStr <> vbNullString Then Return "storing scriptRng ranges returned error: " + errStr
-            errStr = invokeScripts()
-            If errStr <> vbNullString Then Return "invoking scripts returned error: " + errStr
-            errStr = getResults()
-            If errStr <> vbNullString Then Return "fetching/placing result files/content returned error: " + errStr
-            errStr = getDiags()
-            If errStr <> vbNullString Then Return "fetching/placing result diagrams returned error: " + errStr
-        Else ' RDotNet invocation
+            Try
+                If Not removeFiles() Then Return "cancelled shell Rdefinitions run"
+                If Not storeArgs() Then Return "cancelled shell Rdefinitions run"
+                If Not storeScriptRng() Then Return "cancelled shell Rdefinitions run"
+                If Not invokeScripts() Then Return "cancelled shell Rdefinitions run"
+                If Not getResults() Then Return "cancelled shell Rdefinitions run"
+                If Not getDiags() Then Return "cancelled shell Rdefinitions run"
+            Catch ex As Exception
+                Return "Exception in shell Rdefinitions run: " + ex.Message
+            End Try
+        Else ' RDotNet invocation 
             errStr = initializeRDotNet()
             If errStr <> vbNullString Then Return "initializing RdotNet returned error: " + errStr
-            errStr = prepareParamsInvokeScriptsAndGetResults()
-            If errStr <> vbNullString Then Return "TestRDotNet returned error: " + errStr
+            If Not prepareParamsInvokeScriptsAndGetResults() Then Return "cancelled RdotNet Rdefinitions run"
         End If
         ' all is OK = return nullstring
         Return vbNullString
+    End Function
+
+    ' Msgbox that avoids further Msgboxes (click Yes) or cancels run altogether (click Cancel)
+    Private Function myMsgBox(message As String) As Boolean
+        If avoidFurtherMsgBoxes Then Return True
+        Dim retval As MsgBoxResult = MsgBox(message + vbCrLf + "Avoid further Messages (Yes/No) or abort Rdefinition (Cancel)", MsgBoxStyle.YesNoCancel)
+        If retval = MsgBoxResult.Yes Then avoidFurtherMsgBoxes = True
+        Return (retval = MsgBoxResult.Yes Or retval = MsgBoxResult.No)
     End Function
 
     ' initialize RdotNet engine
@@ -427,9 +446,10 @@ Public Module RAddin
                 ' set the symbol to the correct name
                 rdotnetengine.SetSymbol(argname, targetArg)
             Catch ex As Exception
-                Return "Error occured when creating RdotNet arg '" + argname + "', " + ex.Message
+                myMsgBox("Error occured when creating RdotNet arg '" + argname + "', " + ex.Message)
             End Try
         Next
+
         ' then evaluate excel stored scripts
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Dim scriptText As String = Nothing
@@ -444,7 +464,7 @@ Public Module RAddin
                 Try
                     rdotnetengine.Evaluate(scriptText)
                 Catch ex As Exception
-                    Return "Error occured when evaluating script '" + scriptText + "', " + ex.Message
+                    myMsgBox("Error occured when evaluating script '" + scriptText + "', " + ex.Message)
                 End Try
             Else
                 Dim i As Integer = 1
@@ -457,7 +477,7 @@ Public Module RAddin
                                 evalLine = RDataRange(i, j).Value2
                                 rdotnetengine.Evaluate(evalLine)
                             Catch ex As Exception
-                                Return "Error occured when evaluating script line '" + evalLine + "', " + ex.Message
+                                myMsgBox("Error occured when evaluating script line '" + evalLine + "', " + ex.Message)
                             End Try
                             j = j + 1
                         Loop Until j > RDataRange.Columns.Count
@@ -477,7 +497,7 @@ Public Module RAddin
             Try
                 rdotnetengine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
             Catch ex As Exception
-                Return "Error occured when evaluating script '" + curWbPrefix + scriptpath + "\" + scriptname + "', " + ex.Message
+                myMsgBox("Error occured when evaluating script '" + curWbPrefix + scriptpath + "\" + scriptname + "', " + ex.Message)
             End Try
         Next
 
@@ -513,7 +533,7 @@ Public Module RAddin
                 End If
 
             Catch ex As Exception
-                Return "Error occured when evaluating result '" + resname + "', " + ex.Message
+                myMsgBox("Error occured when evaluating result '" + resname + "', " + ex.Message)
             End Try
 
             ' then put data into excel range
@@ -528,7 +548,7 @@ Public Module RAddin
                         Try
                             RDataRange(i + 1, j + 1).Value2 = resultData(i, j)
                         Catch ex As Exception
-                            Return "Error occured when putting result '" + resname + "', " + ex.Message
+                            myMsgBox("Error occured when putting result '" + resname + "', " + ex.Message)
                         End Try
                         j = j + 1
                     Loop Until j > columnCount - 1
@@ -588,7 +608,7 @@ Public Module RAddin
         Return vbNullString
     End Function
 
-    ' gets definitions from  current selected R script invocation range (Rdefintions)
+    ' gets definitions from  current selected R script invocation range (Rdefinitions)
     Public Function getRDefinitions() As String
         Try
             RdefDic("args") = {}

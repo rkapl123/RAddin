@@ -23,12 +23,15 @@ Public Class RAddinRibbon
         If errStr <> "" Then MsgBox(errStr)
     End Sub
 
+    ' reflect the change in the togglebuttons title
     Public Function getToggleLabel(control As IRibbonControl) As String
         Return "run via " + IIf(runShell, "Shell", "RdotNet")
     End Function
 
+    ' toggle between shell and Rdotnet mode
     Public Sub toggleRunScript(control As IRibbonControl, pressed As Boolean)
         runShell = Not pressed
+        ' invalidate to reflect the change in the togglebuttons title
         RAddin.theRibbon.Invalidate()
     End Sub
 
@@ -62,11 +65,6 @@ Public Class RAddinRibbon
     End Function
 
     Public Sub selectItem(control As IRibbonControl, id As String, index As Integer)
-        Dim errStr As String
-        errStr = RAddin.startRdefRefresh()
-        If errStr <> vbNullString Then
-            MsgBox(errStr)
-        End If
         RAddin.Rdefinitions = Rcalldefs(index)
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()

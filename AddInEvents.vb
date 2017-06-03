@@ -25,8 +25,8 @@ Public Class AddInEvents
             MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
             Exit Sub
         End If
-        errStr = RAddin.storeArgs()
-        If errStr <> "" Then MsgBox("Error when saving inputfiles in Workbook_Save: " + errStr)
+        RAddin.avoidFurtherMsgBoxes = False
+        RAddin.storeArgs()
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
