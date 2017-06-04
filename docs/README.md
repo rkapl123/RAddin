@@ -2,8 +2,9 @@ R Addin provides an easy way to define and run R script interactions started fro
 
 # Using RAddin
 
-Running an R script is simply done by selecting the appropriate Rdefinition and pressing "run Rdefinition/shell" on the R Addin Ribbon Tab. 
-Selecting the Rdefinition highlights the specified definition area (see below).
+Running an R script is simply done by selecting the desired invocation method (run via shell or RdotNet) on the R Addin Ribbon Tab and clicking "run <Rdefinition>" 
+beneath the Workbook/Sheet name. 
+Selecting the Rdefinition in the dropdown highlights the specified definition area.
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
 
@@ -11,16 +12,17 @@ Selecting the Rdefinition highlights the specified definition area (see below).
 
 Rscript interactions (Rdefinitions) are defined using a 3 column named area (1st col: definition type, 2nd: definition value, 3rd: definition path):
 
-The Rdefinition area name must start with R_Addin and can have an optional postfix as an additional description of the definition.
+The Rdefinition area name must start with R_Addin and can have an optional postfix as an additional description of the definition. 
+If there is no postfix, the script is called the "MainScript" of this Workbook/Worksheet.
 
-An area name can be Workbook global or worksheet local, the first Rdefinition area is being taken as the default definition (used for running when not selecting a Rdefinition).
-the worksheet name (for worksheet local names) or the workbook name (for workbook global names) is prepended to the postfix definition description.
+An area name can be Workbook global or worksheet local.
+In the Rdefinition dropdown the worksheet name (for worksheet local names) or the workbook name (for workbook global names) is prepended to the postfix definition description.
 
 So for the 8 areas currently defined in the test workbook testRAddin.xlsx, there should be 8 entries in the Rdefinition dropdown: 
 
-- Test_RdotNet, 
-- Test_OtherSheet, 
-- testRAddin.xlsx, 
+- Test_RdotNet, (MainScript)
+- Test_OtherSheet, (MainScript)
+- testRAddin.xlsx, (MainScript)
 - Test_OtherSheetAnotherDef, 
 - testRAddin.xlsxAnotherDef,
 - testRAddin.xlsxErrorInDef,
@@ -46,10 +48,27 @@ The range names that are referred in arg, res, scriptrng/debugrng and diag types
 
 The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
 
+Still open Issues:
+
+- [ ] Implement a faster way to read textfiles into excel (currently this is terribly slow for large files)
+- [ ] Improve RdotNet integration (lists are missing, orientation of vectors, etc.)
+
 # Installation of RAddin
 
 put Raddin-AddIn-packed.xll and Raddin-AddIn-packed.xll.config (Raddin-AddIn64-packed.xll and Raddin-AddIn64-packed.xll.config for 64 bit excel) into %appdata%\Microsoft\AddIns 
 and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the Addin manually).
+
+Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
+
+```XML
+  <appSettings file="O:\SOFTWARE\TRIT\MRO\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
+    <add key="ExePath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
+    <add key="rPath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin" /> : The R-DLL-Path stub (bitness is added using below settings) for the RdotNet invocation method
+    <add key="rPath64bit" value="x64" /> : the folder for the 64 bit R-DLLs 
+    <add key="rPath32bit" value="i386" /> : the folder for the 32 bit R-DLLs
+```
+
+For the RdotNet invocation method alwys keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!
 
 # Building RAddin
 
