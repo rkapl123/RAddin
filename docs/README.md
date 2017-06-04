@@ -5,7 +5,7 @@ R Addin provides an easy way to define and run R script interactions started fro
 Running an R script is simply done by selecting the appropriate Rdefinition and pressing "run Rdefinition/shell" on the R Addin Ribbon Tab. 
 Selecting the Rdefinition highlights the specified definition area (see below).
 
-![Image of screenshot](https://github.com/rkapl123/RAddin/tree/master/docs/screenshot1.png)
+![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
 
 # Defining RAddin script interactions (Rdefinitions)
 
