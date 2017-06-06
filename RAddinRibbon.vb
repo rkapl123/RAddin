@@ -8,12 +8,11 @@ Public Class RAddinRibbon
 
     Public runShell As Boolean
     Public runRdotNet As Boolean
-    Private currentSheet As String
 
     Public Sub startRprocess(control As IRibbonControl)
         Dim errStr As String
-        ' set Rdefinition to invocaters range...
-        RAddin.Rdefinitions = RAddin.rdefsheetColl(currentSheet).Item(control.Id)
+        ' set Rdefinition to invocaters range... invocating sheet is put into Tag
+        RAddin.Rdefinitions = RAddin.rdefsheetColl(control.Tag).Item(control.Id)
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()
         errStr = RAddin.startRprocess(runShell, runRdotNet)
@@ -126,9 +125,9 @@ Public Class RAddinRibbon
     ' create the buttons in the WB/sheet dropdown
     Public Function getDynMenContent(control As IRibbonControl) As String
         Dim xmlString As String = "<menu xmlns='http://schemas.microsoft.com/office/2009/07/customui'>"
-        currentSheet = RAddin.rdefsheetMap(control.Id)
+        Dim currentSheet As String = RAddin.rdefsheetMap(control.Id)
         For Each nodeName As String In RAddin.rdefsheetColl(currentSheet).Keys
-            xmlString = xmlString + "<button id='" + nodeName + "' label='run " + nodeName + "' imageMso='SignatureLineInsert' onAction='startRprocess' screentip='run " + nodeName + " Rdefinition' supertip='runs R script defined in " + nodeName + " R_Addin range' />"
+            xmlString = xmlString + "<button id='" + nodeName + "' label='run " + nodeName + "' imageMso='SignatureLineInsert' onAction='startRprocess' tag ='" + currentSheet + "' screentip='run " + nodeName + " Rdefinition' supertip='runs R script defined in " + nodeName + " R_Addin range on sheet " + currentSheet + "' />"
         Next
         xmlString = xmlString + "</menu>"
         Return xmlString
