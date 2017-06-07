@@ -66,6 +66,9 @@ Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
     <add key="rPath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin" /> : The R-DLL-Path stub (bitness is added using below settings) for the RdotNet invocation method
     <add key="rPath64bit" value="x64" /> : the folder for the 64 bit R-DLLs 
     <add key="rPath32bit" value="i386" /> : the folder for the 32 bit R-DLLs
+	<add key="presetSheetButtonsCount" value="24"/> : the preset maximum Button Count for Sheets (if you expect more sheets with Rdefinitions set it accordingly) 
+    <add key="runShell" value="True"/> : the default setting for invocation method shell
+    <add key="runRdotNet" value="False"/> : the default setting for invocation method RdotNet 
 ```
 
 For the RdotNet invocation method alwys keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!

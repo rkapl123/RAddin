@@ -1,5 +1,6 @@
 ﻿Imports System.Runtime.InteropServices
 Imports ExcelDna.Integration.CustomUI
+Imports System.Configuration
 
 ' Events from Ribbon
 <ComVisible(True)>
@@ -51,24 +52,8 @@ Public Class RAddinRibbon
     End Sub
 
     Public Sub refreshRdefs(control As IRibbonControl)
-        Dim sModuleInfo As String = vbNullString
-        For Each tModule As ProcessModule In Process.GetCurrentProcess().Modules
-            Dim sModule As String = tModule.FileName
-            If sModule.ToUpper.Contains("RADDIN-ADDIN-PACKED.XLL") Or sModule.ToUpper.Contains("RADDIN-ADDIN64-PACKED.XLL") Then
-                sModuleInfo = sModule & ", Buildtime: " & FileDateTime(sModule).ToString()
-            End If
-        Next
-        Dim errStr As String
-        errStr = RAddin.startRnamesRefresh()
-        If errStr <> vbNullString Then
-            MsgBox(sModuleInfo & vbCrLf & vbCrLf & "refresh Error: " & errStr)
-        Else
-            If UBound(Rcalldefnames) = -1 Then
-                MsgBox(sModuleInfo & vbCrLf & vbCrLf & "no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
-            Else
-                MsgBox(sModuleInfo & vbCrLf & vbCrLf & "refreshed Rnames from current Workbook !")
-            End If
-        End If
+        Dim myAbout As AboutBox1 = New AboutBox1
+        myAbout.ShowDialog()
     End Sub
 
     Public Function GetItemCount(control As IRibbonControl) As Integer
@@ -92,8 +77,12 @@ Public Class RAddinRibbon
     Public Sub ribbonLoaded(myribbon As IRibbonUI)
         RAddin.theRibbon = myribbon
         ' set default run via methods ..
-        runShell = True
-        runRdotNet = False
+        Try
+            runShell = CBool(ConfigurationManager.AppSettings("runShell"))
+            runRdotNet = CBool(ConfigurationManager.AppSettings("runRdotNet"))
+        Catch ex As Exception
+            MsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message)
+        End Try
     End Sub
 
     ' creates the Ribbon
@@ -103,12 +92,13 @@ Public Class RAddinRibbon
               "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" +
               "<toggleButton id='shell' label='run via shell' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files' supertip='toggles whether to run R script via Shell/Files' />" +
               "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
-              "<dialogBoxLauncher><button id='dialog' label='refresh Rdefinitions and get RAddin Info' onAction='refreshRdefs' tag='3' screentip='refresh Rdefinitions from current Workbook and get Info about RAddin' supertip='refreshes the Rdefinition: dropdown from all ranges in the current Workbook called R_Addin and gets RAddin Info (Buildtime)' /></dialogBoxLauncher></group>" +
+              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox and refresh Rdefinitions from current Workbook'/></dialogBoxLauncher></group>" +
               "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
-
-        For i As Integer = 0 To 10
+        Dim presetSheetButtonsCount As Integer = Int16.Parse(ConfigurationManager.AppSettings("presetSheetButtonsCount"))
+        Dim thesize As String = IIf(presetSheetButtonsCount < 15, "normal", "large")
+        For i As Integer = 0 To presetSheetButtonsCount
             customUIXml = customUIXml + "<dynamicMenu id='ID" + i.ToString() + "' " +
-                                            "size='large' getLabel='getSheetLabel' imageMso='SignatureLineInsert' " +
+                                            "size='" + thesize + "' getLabel='getSheetLabel' imageMso='SignatureLineInsert' " +
                                             "screentip='Select script to run' " +
                                             "getContent='getDynMenContent' getVisible='getDynMenVisible'/>"
         Next
