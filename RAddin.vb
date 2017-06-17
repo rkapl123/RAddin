@@ -240,52 +240,15 @@ Public Module RAddin
                 .SaveData = True
                 .AdjustColumnWidth = True
                 .RefreshPeriod = 0
-                .TextFilePromptOnRefresh = False
                 .TextFilePlatform = 850
                 .TextFileStartRow = 1
                 .TextFileParseType = XlTextParsingType.xlDelimited
                 .TextFileTextQualifier = XlTextQualifier.xlTextQualifierDoubleQuote
-                .TextFileConsecutiveDelimiter = False
                 .TextFileTabDelimiter = True
-                .TextFileSemicolonDelimiter = False
-                .TextFileCommaDelimiter = False
-                .TextFileSpaceDelimiter = False
-                '.TextFileColumnDataTypes = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
                 .TextFileTrailingMinusNumbers = True
                 .Refresh(BackgroundQuery:=False)
             End With
             newQueryTable.Delete()
-
-            'Dim infile As StreamReader = Nothing
-            'Try
-            '    infile = New StreamReader(curWbPrefix + readdir + "\" + resFilename)
-            'Catch ex As Exception
-            '    If Not myMsgBox("Error occured in getResults when opening '" + currWb.Path + "\" + readdir + "\" + resFilename + "', " + ex.Message) Then Return False
-            'End Try
-
-            '' parse the actual file line by line
-            'Dim i As Integer = 1, currentRecord As String() = Nothing, currentLine As String
-            'RDataRange.ClearContents()
-            'Do While Not infile.EndOfStream
-            '    Try
-            '        currentLine = infile.ReadLine
-            '        currentRecord = currentLine.Split(vbTab)
-            '    Catch ex As Exception
-            '        If infile IsNot Nothing Then infile.Close()
-            '        If Not myMsgBox("Error occured in getResults when parsing file '" + resFilename + "', " + ex.Message) Then Return False
-            '    End Try
-            '    ' Put parsed data into target range column by column
-            '    For j = 1 To currentRecord.Count()
-            '        Try
-            '            RDataRange.Cells(i, j).Value2 = currentRecord(j - 1)
-            '        Catch ex As Exception
-            '            If infile IsNot Nothing Then infile.Close()
-            '            If Not myMsgBox("Error occured in getResults when writing data into '" + RDataRange.Parent.name + "!" + RDataRange.Address + "', " + ex.Message) Then Return False
-            '        End Try
-            '    Next
-            '    i = i + 1
-            'Loop
-            'If infile IsNot Nothing Then infile.Close()
         Next
         Return True
     End Function
