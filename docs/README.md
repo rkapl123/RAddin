@@ -48,9 +48,9 @@ The range names that are referred in arg, res, scriptrng/debugrng and diag types
 
 The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
 
-Still open Issues:
+Issues:
 
-- [ ] Implement a faster way to read textfiles into excel (currently this is terribly slow for large files)
+- [x] Implement a faster way to read textfiles into excel (done via querytables/textfiles)
 - [ ] Improve RdotNet integration (lists are missing, orientation of vectors, etc.)
 
 # Installation of RAddin
