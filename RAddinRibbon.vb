@@ -127,4 +127,5 @@ Public Class RAddinRibbon
     Public Function getDynMenVisible(control As IRibbonControl) As Boolean
         Return RAddin.rdefsheetMap.ContainsKey(control.Id)
     End Function
+
 End Class

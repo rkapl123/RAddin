@@ -101,6 +101,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="AddInEvents.vb" />
+    <Compile Include="RdotnetInvocation.vb" />
+    <Compile Include="RscriptInvocation.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Resources.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -137,7 +139,9 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

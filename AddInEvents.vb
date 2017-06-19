@@ -14,7 +14,7 @@ Public Class AddInEvents
 
     'has to be implemented
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
-        If RAddin.rdotnetengine IsNot Nothing Then RAddin.rdotnetengine.Dispose()
+        If RdotnetInvocation.rdotnetengine IsNot Nothing Then RdotnetInvocation.rdotnetengine.Dispose()
     End Sub
 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
@@ -26,7 +26,7 @@ Public Class AddInEvents
             Exit Sub
         End If
         RAddin.avoidFurtherMsgBoxes = False
-        RAddin.storeArgs()
+        RscriptInvocation.storeArgs()
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
