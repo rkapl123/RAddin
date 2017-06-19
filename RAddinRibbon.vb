@@ -22,7 +22,7 @@ Public Class RAddinRibbon
 
     ' reflect the change in the togglebuttons title
     Public Function getImage(control As IRibbonControl) As String
-        If (runShell And control.Id = "shell") Or (runRdotNet And control.Id = "rdotnet") Then
+        If (runShell And control.Id = "shell") Or (runRdotNet And control.Id = "rdotnet") Or (RAddin.debugScript And control.Id = "debug") Then
             Return "AcceptTask"
         Else
             Return "DeclineTask"
@@ -35,6 +35,8 @@ Public Class RAddinRibbon
             Return runShell
         ElseIf control.Id = "rdotnet" Then
             Return runRdotNet
+        ElseIf control.Id = "debug" Then
+            Return RAddin.debugScript
         Else
             Return False
         End If
@@ -46,6 +48,8 @@ Public Class RAddinRibbon
             runShell = pressed
         ElseIf control.Id = "rdotnet" Then
             runRdotNet = pressed
+        ElseIf control.Id = "debug" Then
+            RAddin.debugScript = pressed
         End If
         ' invalidate to reflect the change in the togglebuttons image
         RAddin.theRibbon.InvalidateControl(control.Id)
@@ -85,13 +89,16 @@ Public Class RAddinRibbon
         End Try
     End Sub
 
-    ' creates the Ribbon
+    ' creates the Ribbon <buttonGroup id='buttonGroup'> <box id='box2' boxStyle='horizontal'>
     Public Overrides Function GetCustomUI(RibbonID As String) As String
         Dim customUIXml As String = "<customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui' onLoad='ribbonLoaded' ><ribbon><tabs><tab id='RaddinTab' label='R Addin'>" +
             "<group id='RaddinGroup' label='General settings'>" +
-              "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='123456789012345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" +
-              "<toggleButton id='shell' label='run via shell' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='1' screentip='toggles whether to run R script via Shell/Files' supertip='toggles whether to run R script via Shell/Files' />" +
-              "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' size='normal' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
+              "<dropDown id='scriptDropDown' label='Rdefinition:' sizeString='12345678901234567890' getItemCount='GetItemCount' getItemID='GetItemID' getItemLabel='GetItemLabel' onAction='selectItem'/>" +
+              "<buttonGroup id='buttonGroup'>" +
+              "<toggleButton id='shell' label='run via shell' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='1' screentip='toggles whether to run R script via Shell/Files' supertip='toggles whether to run R script via Shell/Files' />" +
+              "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
+              "</buttonGroup><toggleButton id='debug' label='debug script' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='3' screentip='toggles whether to debug R script' supertip='toggles whether to debug R script (leave cmd shell open)' />" +
+              "" +
               "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox and refresh Rdefinitions from current Workbook'/></dialogBoxLauncher></group>" +
               "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
         Dim presetSheetButtonsCount As Integer = Int16.Parse(ConfigurationManager.AppSettings("presetSheetButtonsCount"))

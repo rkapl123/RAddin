@@ -13,6 +13,7 @@ Public Module RAddin
     Public rpath As String
     Public avoidFurtherMsgBoxes As Boolean
     Public dirglobal As String
+    Public debugScript As Boolean
 
     ' definitions of current R invocation (scripts, args, results, diags...)
     Public RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
@@ -130,8 +131,6 @@ Public Module RAddin
             RdefDic("scriptspaths") = {}
             RdefDic("scriptrng") = {}
             RdefDic("scriptrngpaths") = {}
-            RdefDic("debugrng") = {}
-            RdefDic("debug") = {}
             rpath = Nothing : rexec = Nothing : dirglobal = vbNullString
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
@@ -147,11 +146,9 @@ Public Module RAddin
                     RdefDic("args")(RdefDic("args").Length - 1) = defval
                     ReDim Preserve RdefDic("argspaths")(RdefDic("argspaths").Length)
                     RdefDic("argspaths")(RdefDic("argspaths").Length - 1) = deffilepath
-                ElseIf deftype = "scriptrng" Or deftype = "debugrng" Then
-                    ReDim Preserve RdefDic("debugrng")(RdefDic("debugrng").Length)
-                    RdefDic("debugrng")(RdefDic("debugrng").Length - 1) = (deftype = "debugrng")
+                ElseIf deftype = "scriptrng" Or deftype = "scriptcell" Then
                     ReDim Preserve RdefDic("scriptrng")(RdefDic("scriptrng").Length)
-                    RdefDic("scriptrng")(RdefDic("scriptrng").Length - 1) = defval
+                    RdefDic("scriptrng")(RdefDic("scriptrng").Length - 1) = IIf(Right(deftype, 4) = "cell", "=", "") + defval
                     ReDim Preserve RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length)
                     RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length - 1) = deffilepath
                 ElseIf deftype = "res" Then
@@ -164,9 +161,7 @@ Public Module RAddin
                     RdefDic("diags")(RdefDic("diags").Length - 1) = defval
                     ReDim Preserve RdefDic("diagspaths")(RdefDic("diagspaths").Length)
                     RdefDic("diagspaths")(RdefDic("diagspaths").Length - 1) = deffilepath
-                ElseIf deftype = "script" Or deftype = "debug" Then
-                    ReDim Preserve RdefDic("debug")(RdefDic("debug").Length)
-                    RdefDic("debug")(RdefDic("debug").Length - 1) = (deftype = "debug")
+                ElseIf deftype = "script" Then
                     ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
                     RdefDic("scripts")(RdefDic("scripts").Length - 1) = defval
                     ReDim Preserve RdefDic("scriptspaths")(RdefDic("scriptspaths").Length)
@@ -186,7 +181,7 @@ Public Module RAddin
             Catch ex As Exception
             End Try
             If rexec Is Nothing And rpath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath defined"
-            If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined"
+            If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + Rdefinitions.Name.Name
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message
         End Try

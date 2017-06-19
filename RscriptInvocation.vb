@@ -98,11 +98,14 @@ Module RscriptInvocation
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Try
                 Dim errMsg As String
-                errMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
-                If Len(errMsg) > 0 Then
-                    scriptText = RdefDic("scriptrng")(c)
+                ' scriptrng beginning with a "=" is always a scriptcell...
+                If Left(RdefDic("scriptrng")(c), 1) = "=" Then
+                    scriptText = RdefDic("scriptrng")(c).Substring(1)
                     scriptRngFilename = "RDataRangeRow" + c.ToString() + ".R"
+                Else
+                    errMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
                 End If
+
 
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
                 Dim curWbPrefix As String = IIf(Left(scriptRngdir, 2) = "\\" Or Mid(scriptRngdir, 2, 2) = ":\", "", currWb.Path + "\")
@@ -114,8 +117,6 @@ Module RscriptInvocation
                 outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
 
                 ' reuse the script invocation methods by setting the respective parameters
-                ReDim Preserve RdefDic("debug")(RdefDic("debug").Length)
-                RdefDic("debug")(RdefDic("debug").Length - 1) = RdefDic("debugrng")(c)
                 ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
                 RdefDic("scripts")(RdefDic("scripts").Length - 1) = scriptRngFilename
                 ReDim Preserve RdefDic("scriptspaths")(RdefDic("scriptspaths").Length)
@@ -170,21 +171,8 @@ Module RscriptInvocation
                 If Not RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf) Then Return False
             End If
             Try
-                Dim cmd As Process
-                cmd = New Process()
-                cmd.StartInfo.FileName = IIf(rexec = "cmd", script, rexec)
-                cmd.StartInfo.Arguments = IIf(rexec = "cmd", "", script)
-                cmd.StartInfo.RedirectStandardInput = False
-                cmd.StartInfo.RedirectStandardOutput = IIf(rexec = "cmd", False, RdefDic("debug")(c))
-                cmd.StartInfo.RedirectStandardError = IIf(rexec = "cmd", False, RdefDic("debug")(c))
-                cmd.StartInfo.CreateNoWindow = False
-                cmd.StartInfo.UseShellExecute = (rexec = "cmd")
-                cmd.StartInfo.WorkingDirectory = fullScriptPath
-                cmd.Start()
-                cmd.WaitForExit()
-                If RdefDic("debug")(c) And rexec <> "cmd" Then
-                    MsgBox("returned error/output from process: " + cmd.StandardError.ReadToEnd())
-                End If
+                Directory.SetCurrentDirectory(fullScriptPath) '
+                Shell(IIf(RAddin.debugScript, "cmd.exe /c ", "") + """" + rexec + """ " + script + IIf(RAddin.debugScript, " & pause", ""), AppWinStyle.NormalFocus, True)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
             End Try
