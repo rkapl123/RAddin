@@ -35,7 +35,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of the executable script. 
 - arg (R input objects, txt files): path where the (input) arguments are stored. 
-- res (R output objects, txt files): path where the (output) results are expected.
+- res/rres (R output objects, txt files): path where the (output) results are expected. If the definition type is rres, results are removed before saving
 - diag (R output diagrams, png format): path where the (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either a range, where this script is stored (scriptrng) or directly as a value (text content or formula result) in the 2nd column (scriptcell)
 

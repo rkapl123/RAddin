@@ -124,6 +124,7 @@ Public Module RAddin
             RdefDic("args") = {}
             RdefDic("argspaths") = {}
             RdefDic("results") = {}
+            RdefDic("rresults") = {}
             RdefDic("resultspaths") = {}
             RdefDic("diags") = {}
             RdefDic("diagspaths") = {}
@@ -151,7 +152,9 @@ Public Module RAddin
                     RdefDic("scriptrng")(RdefDic("scriptrng").Length - 1) = IIf(Right(deftype, 4) = "cell", "=", "") + defval
                     ReDim Preserve RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length)
                     RdefDic("scriptrngpaths")(RdefDic("scriptrngpaths").Length - 1) = deffilepath
-                ElseIf deftype = "res" Then
+                ElseIf deftype = "res" Or deftype = "rres" Then
+                    ReDim Preserve RdefDic("rresults")(RdefDic("rresults").Length)
+                    RdefDic("rresults")(RdefDic("rresults").Length - 1) = (deftype = "rres")
                     ReDim Preserve RdefDic("results")(RdefDic("results").Length)
                     RdefDic("results")(RdefDic("results").Length - 1) = defval
                     ReDim Preserve RdefDic("resultspaths")(RdefDic("resultspaths").Length)

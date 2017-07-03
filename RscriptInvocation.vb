@@ -221,6 +221,9 @@ Module RscriptInvocation
                 .TextFileTrailingMinusNumbers = True
                 .Refresh(BackgroundQuery:=False)
             End With
+            If RdefDic("rresults")(c) Then
+                currWb.Names.Add(Name:="___RaddinResult" + RdefDic("results")(c), RefersTo:=newQueryTable.ResultRange, Visible:=False)
+            End If
             newQueryTable.Delete()
         Next
         Return True
@@ -328,4 +331,14 @@ Module RscriptInvocation
         Return True
     End Function
 
+    ' remove results in all result Ranges (before saving)
+    Public Function removeResultsDiags() As Boolean
+        For Each namedrange As Name In currWb.Names
+            If Left(namedrange.Name, 15) = "___RaddinResult" Then
+                namedrange.RefersToRange.Clear()
+                namedrange.Delete()
+            End If
+        Next
+        Return True
+    End Function
 End Module
