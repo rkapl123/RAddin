@@ -34,7 +34,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - rpath: path to the folder with the R dlls, in case you want to use the in-memory option with RDotNet. Only needed when overriding the RPath in the AppSettings in the Raddin-AddIn-packed.xll.config file. 
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of the executable script. 
-- arg (R input objects, txt files): path where the (input) arguments are stored. 
+- arg/args[rc] (R input objects, txt files): path where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
 - res/rres (R output objects, txt files): path where the (output) results are expected. If the definition type is rres, results are removed before saving
 - diag (R output diagrams, png format): path where the (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either a range, where this script is stored (scriptrng) or directly as a value (text content or formula result) in the 2nd column (scriptcell)

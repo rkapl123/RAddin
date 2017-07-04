@@ -10,7 +10,7 @@ Public Module RAddin
     Public rdefsheetColl As Dictionary(Of String, Dictionary(Of String, Range))
     Public rdefsheetMap As Dictionary(Of String, String)
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
-    Public rpath As String
+    Public rHome As String
     Public avoidFurtherMsgBoxes As Boolean
     Public dirglobal As String
     Public debugScript As Boolean
@@ -27,7 +27,7 @@ Public Module RAddin
         ' get the definition range
         errStr = getRDefinitions()
         If errStr <> vbNullString Then Return "Failed getting Rdefinitions: " + errStr
-        If runShell Then ' shell invocation
+        If runShell Then ' Shell invocation
             Try
                 If Not RscriptInvocation.removeFiles() Then Return vbNullString
                 If Not RscriptInvocation.storeArgs() Then Return vbNullString
@@ -36,13 +36,17 @@ Public Module RAddin
                 If Not RscriptInvocation.getResults() Then Return vbNullString
                 If Not RscriptInvocation.getDiags() Then Return vbNullString
             Catch ex As Exception
-                Return "Exception in shell Rdefinitions run: " + ex.Message + ex.StackTrace
+                Return "Exception in Shell Rdefinitions run: " + ex.Message + ex.StackTrace
             End Try
         End If
         If runRdotNet Then ' RDotNet invocation
             Try
                 If Not RdotnetInvocation.initializeRDotNet() Then Return vbNullString
-                If Not RdotnetInvocation.prepareParamsInvokeScriptsAndGetResults() Then Return vbNullString
+                If Not RdotnetInvocation.storeArgs() Then Return vbNullString
+                If Not RdotnetInvocation.invokeExcelScripts() Then Return vbNullString
+                If Not RdotnetInvocation.invokeFileSysScripts() Then Return vbNullString
+                If Not RdotnetInvocation.getResults() Then Return vbNullString
+                If Not RdotnetInvocation.getDiags() Then Return vbNullString
             Catch ex As Exception
                 Return "Exception in RdotNet Rdefinitions run: " + ex.Message + ex.StackTrace
             End Try
@@ -122,6 +126,7 @@ Public Module RAddin
     Public Function getRDefinitions() As String
         Try
             RdefDic("args") = {}
+            RdefDic("argsrc") = {}
             RdefDic("argspaths") = {}
             RdefDic("results") = {}
             RdefDic("rresults") = {}
@@ -132,7 +137,7 @@ Public Module RAddin
             RdefDic("scriptspaths") = {}
             RdefDic("scriptrng") = {}
             RdefDic("scriptrngpaths") = {}
-            rpath = Nothing : rexec = Nothing : dirglobal = vbNullString
+            rHome = Nothing : rexec = Nothing : dirglobal = vbNullString
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
@@ -140,9 +145,11 @@ Public Module RAddin
                 deffilepath = defRow.Cells(1, 3).Value2
                 If deftype = "rexec" Then ' setting for shell innvocation
                     rexec = defval
-                ElseIf deftype = "rpath" Then ' setting for RdotNet
-                    rpath = defval
-                ElseIf deftype = "arg" Then
+                ElseIf deftype = "rhome" Then ' setting for RdotNet
+                    rHome = defval
+                ElseIf deftype = "arg" Or deftype = "argr" Or deftype = "argc" Or deftype = "argrc" Or deftype = "argcr" Then
+                    ReDim Preserve RdefDic("argsrc")(RdefDic("argsrc").Length)
+                    RdefDic("argsrc")(RdefDic("argsrc").Length - 1) = Replace(deftype, "arg", "")
                     ReDim Preserve RdefDic("args")(RdefDic("args").Length)
                     RdefDic("args")(RdefDic("args").Length - 1) = defval
                     ReDim Preserve RdefDic("argspaths")(RdefDic("argspaths").Length)
@@ -178,17 +185,28 @@ Public Module RAddin
                 If rexec Is Nothing Then rexec = ConfigurationManager.AppSettings("ExePath")
             Catch ex As Exception
             End Try
-            ' get default Rpath from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
+            ' get default rHome from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
-                If rpath Is Nothing Then rpath = ConfigurationManager.AppSettings("rPath")
+                If rHome Is Nothing Then rHome = ConfigurationManager.AppSettings("rHome")
             Catch ex As Exception
             End Try
-            If rexec Is Nothing And rpath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath defined"
+            If rexec Is Nothing And rHome Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rHome (for Rdotnet) defined"
             If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + Rdefinitions.Name.Name
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message
         End Try
         Return vbNullString
+    End Function
+
+    ' remove results in all result Ranges (before saving)
+    Public Function removeResultsDiags() As Boolean
+        For Each namedrange As Name In currWb.Names
+            If Left(namedrange.Name, 15) = "___RaddinResult" Then
+                namedrange.RefersToRange.Clear()
+                namedrange.Delete()
+            End If
+        Next
+        Return True
     End Function
 
 End Module

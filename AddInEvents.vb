@@ -12,11 +12,12 @@ Public Class AddInEvents
         Application = ExcelDnaUtil.Application
     End Sub
 
-    'has to be implemented
+    ' clean up when Raddin is deactivated
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
         If RdotnetInvocation.rdotnetengine IsNot Nothing Then RdotnetInvocation.rdotnetengine.Dispose()
     End Sub
 
+    ' save arg ranges to text files as well 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
         Dim errStr As String
         errStr = doDefinitions(Wb)
@@ -27,13 +28,14 @@ Public Class AddInEvents
         End If
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
-        RscriptInvocation.removeResultsDiags()
+        RAddin.removeResultsDiags()
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
         ' is being treated in Workbook_Activate...
     End Sub
 
+    ' refresh ribbon with current workbook's Rnames
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
         errStr = doDefinitions(Wb)
@@ -45,6 +47,7 @@ Public Class AddInEvents
         RAddin.theRibbon.Invalidate()
     End Sub
 
+    ' get Rnames of current workbook and load Rdefinitions of first name in R_Addin Names
     Private Function doDefinitions(Wb As Workbook) As String
         Dim errStr As String
         currWb = Wb
@@ -61,4 +64,5 @@ Public Class AddInEvents
         If errStr <> vbNullString Then Return "Error while getRdefinitions in doDefinitions: " + errStr
         Return vbNullString
     End Function
+
 End Class

@@ -98,7 +98,7 @@ Module RscriptInvocation
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Try
                 Dim errMsg As String
-                ' scriptrng beginning with a "=" is always a scriptcell...
+                ' scriptrng beginning with a "=" is a scriptcell (as defined in getRDefinitions) ...
                 If Left(RdefDic("scriptrng")(c), 1) = "=" Then
                     scriptText = RdefDic("scriptrng")(c).Substring(1)
                     scriptRngFilename = "RDataRangeRow" + c.ToString() + ".R"
@@ -331,14 +331,4 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' remove results in all result Ranges (before saving)
-    Public Function removeResultsDiags() As Boolean
-        For Each namedrange As Name In currWb.Names
-            If Left(namedrange.Name, 15) = "___RaddinResult" Then
-                namedrange.RefersToRange.Clear()
-                namedrange.Delete()
-            End If
-        Next
-        Return True
-    End Function
 End Module
