@@ -34,7 +34,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - rpath: path to the folder with the R dlls, in case you want to use the in-memory option with RDotNet. Only needed when overriding the RPath in the AppSettings in the Raddin-AddIn-packed.xll.config file. 
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of the executable script. 
-- arg/args[rc] (R input objects, txt files): path where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
+- arg/arg[rc] (R input objects, txt files): path where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
 - res/rres (R output objects, txt files): path where the (output) results are expected. If the definition type is rres, results are removed before saving
 - diag (R output diagrams, png format): path where the (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either a range, where this script is stored (scriptrng) or directly as a value (text content or formula result) in the 2nd column (scriptcell)
@@ -63,15 +63,15 @@ Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
 ```XML
   <appSettings file="O:\SOFTWARE\TRIT\MRO\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
     <add key="ExePath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
-    <add key="rPath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin" /> : The R-DLL-Path stub (bitness is added using below settings) for the RdotNet invocation method
-    <add key="rPath64bit" value="x64" /> : the folder for the 64 bit R-DLLs 
-    <add key="rPath32bit" value="i386" /> : the folder for the 32 bit R-DLLs
+    <add key="rHome" value="C:\Program Files\Microsoft\MRO\R-3.3.2\" /> : rHome for the RdotNet invocation method, to get the R-DLL-Path the rPath<bitness>bit setting below is used 
+    <add key="rPath64bit" value="bin\x64" /> : the folder for the 64 bit R-DLLs 
+    <add key="rPath32bit" value="bin\i386" /> : the folder for the 32 bit R-DLLs
     <add key="presetSheetButtonsCount" value="24"/> : the preset maximum Button Count for Sheets (if you expect more sheets with Rdefinitions set it accordingly) 
     <add key="runShell" value="True"/> : the default setting for invocation method shell
     <add key="runRdotNet" value="False"/> : the default setting for invocation method RdotNet 
 ```
 
-For the RdotNet invocation method alwys keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!
+For the RdotNet invocation method always keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!
 
 # Building RAddin
 

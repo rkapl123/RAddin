@@ -10,7 +10,6 @@ Public Module RAddin
     Public rdefsheetColl As Dictionary(Of String, Dictionary(Of String, Range))
     Public rdefsheetMap As Dictionary(Of String, String)
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
-    Public rHome As String
     Public avoidFurtherMsgBoxes As Boolean
     Public dirglobal As String
     Public debugScript As Boolean
@@ -137,16 +136,16 @@ Public Module RAddin
             RdefDic("scriptspaths") = {}
             RdefDic("scriptrng") = {}
             RdefDic("scriptrngpaths") = {}
-            rHome = Nothing : rexec = Nothing : dirglobal = vbNullString
+            rPath = Nothing : rexec = Nothing : dirglobal = vbNullString
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
                 defval = defRow.Cells(1, 2).Value2
                 deffilepath = defRow.Cells(1, 3).Value2
                 If deftype = "rexec" Then ' setting for shell innvocation
-                    rexec = defval
-                ElseIf deftype = "rhome" Then ' setting for RdotNet
-                    rHome = defval
+                    RscriptInvocation.rexec = defval
+                ElseIf deftype = "rpath" Then ' setting for RdotNet
+                    RdotnetInvocation.rPath = defval
                 ElseIf deftype = "arg" Or deftype = "argr" Or deftype = "argc" Or deftype = "argrc" Or deftype = "argcr" Then
                     ReDim Preserve RdefDic("argsrc")(RdefDic("argsrc").Length)
                     RdefDic("argsrc")(RdefDic("argsrc").Length - 1) = Replace(deftype, "arg", "")
@@ -182,15 +181,18 @@ Public Module RAddin
             Next
             ' get default rexec path from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
-                If rexec Is Nothing Then rexec = ConfigurationManager.AppSettings("ExePath")
+                If RscriptInvocation.rexec Is Nothing Then RscriptInvocation.rexec = ConfigurationManager.AppSettings("ExePath")
             Catch ex As Exception
+                Return "Error in getRDefinitions: " + ex.Message
             End Try
             ' get default rHome from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
-                If rHome Is Nothing Then rHome = ConfigurationManager.AppSettings("rHome")
+                RdotnetInvocation.rHome = ConfigurationManager.AppSettings("rHome")
+                If RdotnetInvocation.rPath Is Nothing Then RdotnetInvocation.rPath = RdotnetInvocation.rHome + IIf(RdotnetInvocation.rHome.EndsWith("\"), "", "\") + IIf(System.Environment.Is64BitProcess, ConfigurationManager.AppSettings("rPath64bit"), ConfigurationManager.AppSettings("rPath32bit"))
             Catch ex As Exception
+                Return "Error in getRDefinitions: " + ex.Message
             End Try
-            If rexec Is Nothing And rHome Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rHome (for Rdotnet) defined"
+            If rexec Is Nothing And rPath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath (for Rdotnet) defined"
             If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + Rdefinitions.Name.Name
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message

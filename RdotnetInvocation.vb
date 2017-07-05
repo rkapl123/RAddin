@@ -1,23 +1,26 @@
 ﻿Imports RDotNet
 Imports RDotNet.NativeLibrary
-Imports System.Configuration
 Imports Microsoft.Office.Interop.Excel
 
 Module RdotnetInvocation
     Public rdotnetengine As REngine = Nothing
+    Public rPath As String
+    Public rHome As String
 
     ' initialize RdotNet engine
     Public Function initializeRDotNet() As Boolean
         Dim logInfo As String = vbNullString
-        Try
-            Dim fullrpath As String = rHome + IIf(rHome.EndsWith("\"), "", "\") + IIf(System.Environment.Is64BitProcess, ConfigurationManager.AppSettings("rPath64bit"), ConfigurationManager.AppSettings("rPath32bit"))
-            logInfo = NativeUtility.FindRPaths(fullrpath, rHome) + ", Is64BitProcess: " + System.Environment.Is64BitProcess.ToString()
-            REngine.SetEnvironmentVariables(rPath:=fullrpath, rHome:=rHome)
-            rdotnetengine = REngine.GetInstance()
-            rdotnetengine.Initialize()
-        Catch ex As Exception
-            If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",logInfo from FindRPaths: " + logInfo) Then Return False
-        End Try
+        ' only instantiate new engine if there is none already (reuse engine !)
+        If IsNothing(rdotnetengine) Then
+            Try
+                logInfo = NativeUtility.FindRPaths(rPath, rHome) + ", Is64BitProcess: " + System.Environment.Is64BitProcess.ToString()
+                REngine.SetEnvironmentVariables(rPath:=rPath, rHome:=rHome)
+                rdotnetengine = REngine.GetInstance()
+                rdotnetengine.Initialize()
+            Catch ex As Exception
+                If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",logInfo from FindRPaths: " + logInfo) Then Return False
+            End Try
+        End If
         Return True
     End Function
 
@@ -154,13 +157,13 @@ Module RdotnetInvocation
                     columnCount = resultDataSymbolicExpr.AsDataFrame().ColumnCount
                     rowCount = resultDataSymbolicExpr.AsDataFrame().RowCount
                 ElseIf resultDataSymbolicExpr.IsMatrix() Then
-                    resultData = resultDataSymbolicExpr.AsRawMatrix()
-                    columnCount = resultDataSymbolicExpr.AsRawMatrix().ColumnCount
-                    rowCount = resultDataSymbolicExpr.AsRawMatrix().RowCount
+                    resultData = resultDataSymbolicExpr.AsCharacterMatrix()
+                    columnCount = resultDataSymbolicExpr.AsCharacterMatrix().ColumnCount
+                    rowCount = resultDataSymbolicExpr.AsCharacterMatrix().RowCount
                 ElseIf resultDataSymbolicExpr.IsVector() Then
-                    resultData = resultDataSymbolicExpr.AsRaw()
+                    resultData = resultDataSymbolicExpr.AsCharacter()
                     columnCount = 1
-                    rowCount = resultDataSymbolicExpr.AsRaw().Count()
+                    rowCount = resultDataSymbolicExpr.AsCharacter().Count()
                 ElseIf resultDataSymbolicExpr.IsList() Then
                     resultData = resultDataSymbolicExpr.AsList()
                     columnCount = 1

@@ -199,32 +199,40 @@ Module RscriptInvocation
             If Not File.Exists(curWbPrefix + readdir + "\" + resFilename) Then
                 If Not RAddin.myMsgBox("Results file '" + curWbPrefix + readdir + "\" + resFilename + "' not found!") Then Return False
             End If
-            Dim newQueryTable As QueryTable
-            newQueryTable = RDataRange.Worksheet.QueryTables.Add(Connection:="TEXT;" & curWbPrefix + readdir + "\" + resFilename, Destination:=RDataRange)
-            With newQueryTable
-                .Name = "Data"
-                .FieldNames = True
-                .RowNumbers = False
-                .FillAdjacentFormulas = False
-                .PreserveFormatting = True
-                .RefreshOnFileOpen = False
-                .RefreshStyle = XlCellInsertionMode.xlOverwriteCells
-                .SavePassword = False
-                .SaveData = True
-                .AdjustColumnWidth = True
-                .RefreshPeriod = 0
-                .TextFilePlatform = 850
-                .TextFileStartRow = 1
-                .TextFileParseType = XlTextParsingType.xlDelimited
-                .TextFileTextQualifier = XlTextQualifier.xlTextQualifierDoubleQuote
-                .TextFileTabDelimiter = True
-                .TextFileTrailingMinusNumbers = True
-                .Refresh(BackgroundQuery:=False)
-            End With
-            If RdefDic("rresults")(c) Then
-                currWb.Names.Add(Name:="___RaddinResult" + RdefDic("results")(c), RefersTo:=newQueryTable.ResultRange, Visible:=False)
-            End If
-            newQueryTable.Delete()
+            Try
+                Dim newQueryTable As QueryTable
+                newQueryTable = RDataRange.Worksheet.QueryTables.Add(Connection:="TEXT;" & curWbPrefix + readdir + "\" + resFilename, Destination:=RDataRange)
+                With newQueryTable
+                    .Name = "Data"
+                    .FieldNames = True
+                    .RowNumbers = False
+                    .FillAdjacentFormulas = False
+                    .PreserveFormatting = True
+                    .RefreshOnFileOpen = False
+                    .RefreshStyle = XlCellInsertionMode.xlOverwriteCells
+                    .SavePassword = False
+                    .SaveData = True
+                    .AdjustColumnWidth = True
+                    .RefreshPeriod = 0
+                    .TextFilePlatform = 850
+                    .TextFileStartRow = 1
+                    .TextFileParseType = XlTextParsingType.xlDelimited
+                    .TextFileTabDelimiter = True
+                    .TextFileSpaceDelimiter = False
+                    .TextFileSemicolonDelimiter = False
+                    .TextFileCommaDelimiter = False
+                    .TextFileDecimalSeparator = "."
+                    .TextFileThousandsSeparator = ","
+                    .TextFileTrailingMinusNumbers = True
+                    .Refresh(BackgroundQuery:=False)
+                End With
+                If RdefDic("rresults")(c) Then
+                    currWb.Names.Add(Name:="___RaddinResult" + RdefDic("results")(c), RefersTo:=newQueryTable.ResultRange, Visible:=False)
+                End If
+                newQueryTable.Delete()
+            Catch ex As Exception
+                If Not RAddin.myMsgBox("Error in placing results in to Excel: " + ex.Message) Then Return False
+            End Try
         Next
         Return True
     End Function
