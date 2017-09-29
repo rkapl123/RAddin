@@ -20,15 +20,21 @@ Public Class AddInEvents
     ' save arg ranges to text files as well 
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
         Dim errStr As String
-        errStr = doDefinitions(Wb)
-        If errStr = "no RNames" Then Exit Sub
-        If errStr <> vbNullString Then
-            MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
-            Exit Sub
+        ' avoid resetting Rdefinition when dropdown selected for a specific RDefinition !
+        If RAddin.dropDownSelected Then
+            errStr = RAddin.getRDefinitions()
+            If errStr <> vbNullString Then MsgBox("Error while getRdefinitions (dropdown selected !) in Workbook_Save: " + errStr)
+        Else
+            errStr = doDefinitions(Wb) ' includes getRDefinitions - for top sorted Rdefinition
+            If errStr = "no RNames" Then Exit Sub
+            If errStr <> vbNullString Then
+                MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
+                Exit Sub
+            End If
         End If
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
-        RAddin.removeResultsDiags()
+        'RAddin.removeResultsDiags()
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
@@ -39,10 +45,11 @@ Public Class AddInEvents
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
         errStr = doDefinitions(Wb)
-        If errStr = "no RNames" Then Exit Sub
-        If errStr <> vbNullString Then
+        RAddin.dropDownSelected = False
+        If errStr = "no RNames" Then
+            RAddin.resetRDefinitions()
+        ElseIf errStr <> vbNullString Then
             MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
-            Exit Sub
         End If
         RAddin.theRibbon.Invalidate()
     End Sub

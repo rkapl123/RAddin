@@ -13,6 +13,7 @@ Public Module RAddin
     Public avoidFurtherMsgBoxes As Boolean
     Public dirglobal As String
     Public debugScript As Boolean
+    Public dropDownSelected As Boolean
 
     ' definitions of current R invocation (scripts, args, results, diags...)
     Public RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
@@ -102,16 +103,17 @@ Public Module RAddin
                 ReDim Preserve Rcalldefs(Rcalldefs.Length)
                 Rcalldefnames(Rcalldefnames.Length - 1) = finalname
                 Rcalldefs(Rcalldefs.Length - 1) = namedrange.RefersToRange
+
+                Dim scriptColl As Dictionary(Of String, Range)
                 If Not rdefsheetColl.ContainsKey(namedrange.Parent.Name) Then
                     ' add to new sheet "menu"
-                    Dim scriptColl As Dictionary(Of String, Range) = New Dictionary(Of String, Range)
+                    scriptColl = New Dictionary(Of String, Range)
                     scriptColl.Add(nodeName, namedrange.RefersToRange)
                     rdefsheetColl.Add(namedrange.Parent.Name, scriptColl)
                     rdefsheetMap.Add("ID" + i.ToString(), namedrange.Parent.Name)
                     i = i + 1
                 Else
                     ' add rdefinition to existing sheet "menu"
-                    Dim scriptColl As Dictionary(Of String, Range)
                     scriptColl = rdefsheetColl(namedrange.Parent.Name)
                     scriptColl.Add(nodeName, namedrange.RefersToRange)
                 End If
@@ -121,22 +123,26 @@ Public Module RAddin
         Return vbNullString
     End Function
 
+    Public Sub resetRDefinitions()
+        RdefDic("args") = {}
+        RdefDic("argsrc") = {}
+        RdefDic("argspaths") = {}
+        RdefDic("results") = {}
+        RdefDic("rresults") = {}
+        RdefDic("resultspaths") = {}
+        RdefDic("diags") = {}
+        RdefDic("diagspaths") = {}
+        RdefDic("scripts") = {}
+        RdefDic("scriptspaths") = {}
+        RdefDic("scriptrng") = {}
+        RdefDic("scriptrngpaths") = {}
+        rPath = Nothing : rexec = Nothing : dirglobal = vbNullString
+    End Sub
+
     ' gets definitions from  current selected R script invocation range (Rdefinitions)
     Public Function getRDefinitions() As String
+        resetRDefinitions()
         Try
-            RdefDic("args") = {}
-            RdefDic("argsrc") = {}
-            RdefDic("argspaths") = {}
-            RdefDic("results") = {}
-            RdefDic("rresults") = {}
-            RdefDic("resultspaths") = {}
-            RdefDic("diags") = {}
-            RdefDic("diagspaths") = {}
-            RdefDic("scripts") = {}
-            RdefDic("scriptspaths") = {}
-            RdefDic("scriptrng") = {}
-            RdefDic("scriptrngpaths") = {}
-            rPath = Nothing : rexec = Nothing : dirglobal = vbNullString
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)

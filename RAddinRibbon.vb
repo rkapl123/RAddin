@@ -73,6 +73,8 @@ Public Class RAddinRibbon
     End Function
 
     Public Sub selectItem(control As IRibbonControl, id As String, index As Integer)
+        ' needed for workbook save (saves selected Rdefinition)
+        RAddin.dropDownSelected = True
         RAddin.Rdefinitions = Rcalldefs(index)
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()

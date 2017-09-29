@@ -3,8 +3,8 @@ R Addin provides an easy way to define and run R script interactions started fro
 # Using RAddin
 
 Running an R script is simply done by selecting the desired invocation method (run via shell or RdotNet) on the R Addin Ribbon Tab and clicking "run <Rdefinition>" 
-beneath the Workbook/Sheet name. Activating the "debug script" toggle button leaves the cmd window open with shell invocation.
-Selecting the Rdefinition in the dropdown highlights the specified definition area.
+beneath the Sheet-button in the Ribbon group "Run R-Scripts defined in WB/sheets names". Activating the "debug script" toggle button leaves the cmd window open with shell invocation.
+Selecting the Rdefinition in the Rdefinition dropdown highlights the specified definition area.
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
 
@@ -39,14 +39,16 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - diag (R output diagrams, png format): path where the (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either a range, where this script is stored (scriptrng) or directly as a value (text content or formula result) in the 2nd column (scriptcell)
 
-In the 2nd column of the Rdefinition range are the definition values as described above.
+In the 2nd column are the definition values as described above.
+- For arg, res, scriptrng and diag these are range names referring to the respective ranges to be taken as arg, res, scriptrng or diag target in the excel workbook.
+- The range names that are referred in arg, res, scriptrng and diag types can also be either workbook global (having no ! in front of the name) or worksheet local (having the worksheet name + ! in front of the name)
 
-Absolute Paths in dir or the definition path column are defined by starting with \\ or X:\ (X being a drive letter)
-For arg, res, scriptrng and diag these are range names referring to the respective ranges to be taken as arg, res, scriptrng or diag target in the excel workbook.
+In the 3rd column are the definition paths of the files referred to in arg, res and diag
+- Absolute Paths in dir or the definition path column are defined by starting with \\ or X:\ (X being a mapped drive letter)
 
-The range names that are referred in arg, res, scriptrng and diag types can also be either workbook global (having no ! in front of the name) or worksheet local (having the worksheet name + ! in front of the name)
+The definitions are loaded into the Rdefinition dropdown and the  either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
 
-The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
+When saving the Workbook the input arguments defined in the currently selected Rdefinition dropdown are stored as well. If nothing is selected, the first Rdefinition of the dropdown is chosen.
 
 Issues:
 
