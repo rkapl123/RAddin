@@ -66,6 +66,7 @@ Public Module RAddin
     ' refresh Rnames from Workbook on demand (currently when invoking about box)
     Public Function startRnamesRefresh() As String
         Dim errStr As String
+        If currWb Is Nothing Then Return "No Workbook active to refresh RNames from..."
         ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
         Rdefinitions = Nothing
         ' get the defined R_Addin Names

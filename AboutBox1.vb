@@ -13,14 +13,14 @@
         Me.LabelProductName.Text = My.Application.Info.ProductName
         Me.LabelVersion.Text = String.Format("Version {0} Buildtime {1}", My.Application.Info.Version.ToString, sModuleInfo)
         Me.LabelCopyright.Text = My.Application.Info.Copyright
-        Me.LabelCompanyName.Text = My.Application.Info.CompanyName
+        Me.LabelCompanyName.Text = "Help and Sources on: " + My.Application.Info.CompanyName
         Me.TextBoxDescription.Text = My.Application.Info.Description
     End Sub
 
     Private Sub OKButton_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles OKButton.Click
         Dim errStr As String
         errStr = RAddin.startRnamesRefresh()
-        If errStr <> vbNullString Then
+        If Len(errStr) > 0 Then
             MsgBox("refresh Error: " & errStr)
         Else
             If UBound(Rcalldefnames) = -1 Then
@@ -33,6 +33,6 @@
     End Sub
 
     Private Sub LabelCompanyName_Click(sender As Object, e As EventArgs) Handles LabelCompanyName.Click
-        Process.Start(LabelCompanyName.Text)
+        Process.Start(My.Application.Info.CompanyName)
     End Sub
 End Class

@@ -72,4 +72,7 @@ Public Class AddInEvents
         Return vbNullString
     End Function
 
+    Private Sub Application_WorkbookBeforeClose(Wb As Workbook, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeClose
+        currWb = Nothing
+    End Sub
 End Class

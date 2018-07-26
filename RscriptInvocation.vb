@@ -97,13 +97,16 @@ Module RscriptInvocation
         scriptRngdir = dirglobal
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Try
-                Dim errMsg As String
+                Dim ErrMsg As String
                 ' scriptrng beginning with a "=" is a scriptcell (as defined in getRDefinitions) ...
                 If Left(RdefDic("scriptrng")(c), 1) = "=" Then
                     scriptText = RdefDic("scriptrng")(c).Substring(1)
                     scriptRngFilename = "RDataRangeRow" + c.ToString() + ".R"
                 Else
-                    errMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
+                    ErrMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
+                    If Len(ErrMsg) > 0 Then
+                        If Not RAddin.myMsgBox(ErrMsg) Then Return False
+                    End If
                 End If
 
 
