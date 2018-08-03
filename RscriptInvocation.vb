@@ -81,7 +81,7 @@ Module RscriptInvocation
                 Loop Until i > RDataRange.Rows.Count
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
-                If Not RAddin.myMsgBox("Error occured when creating inputfile '" + argFilename + "', " + ex.Message) Then Return False
+                If Not RAddin.myMsgBox("Error occured when creating inputfile '" + argFilename + "', " + ex.Message + "(maybe defined the wrong cell format for values?)") Then Return False
             End Try
             If outputFile IsNot Nothing Then outputFile.Close()
         Next

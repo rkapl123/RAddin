@@ -14,7 +14,7 @@ the input arguments (arg, see below) are written to files, the scripts defined i
 
 ## run via RdotNet
 
-the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in RPath/rpath), the defined results that were written to file are passed to and placed in Excel.
+the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in RPath/rpath), the defined results that were created in the R instance are passed to and placed in Excel (no diagrams yet!).
 
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
@@ -67,7 +67,7 @@ Issues:
 
 - [x] Implement a faster way to read textfiles into excel (done via querytables/textfiles)
 - [ ] Implement a faster way to save textfiles from excel
-- [ ] Improve RdotNet integration (lists are missing, orientation of vectors, etc.)
+- [ ] Improve RdotNet integration (lists are missing, orientation of vectors, missing diagrams, etc.)
 
 # Installation of RAddin
 
