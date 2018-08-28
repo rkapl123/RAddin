@@ -1,4 +1,5 @@
 ﻿Imports System.IO
+Imports System.Text
 Imports Microsoft.Office.Interop.Excel
 
 Module RscriptInvocation
@@ -117,7 +118,7 @@ Module RscriptInvocation
                     File.Delete(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
                 End If
 
-                outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
+                outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename, False, Encoding.Default)
 
                 ' reuse the script invocation methods by setting the respective parameters
                 ReDim Preserve RdefDic("scripts")(RdefDic("scripts").Length)
@@ -205,6 +206,7 @@ Module RscriptInvocation
             Try
                 Dim newQueryTable As QueryTable
                 newQueryTable = RDataRange.Worksheet.QueryTables.Add(Connection:="TEXT;" & curWbPrefix + readdir + "\" + resFilename, Destination:=RDataRange)
+                '                    .TextFilePlatform = 850
                 With newQueryTable
                     .Name = "Data"
                     .FieldNames = True
@@ -217,7 +219,6 @@ Module RscriptInvocation
                     .SaveData = True
                     .AdjustColumnWidth = True
                     .RefreshPeriod = 0
-                    .TextFilePlatform = 850
                     .TextFileStartRow = 1
                     .TextFileParseType = XlTextParsingType.xlDelimited
                     .TextFileTabDelimiter = True
