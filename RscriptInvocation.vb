@@ -176,7 +176,7 @@ Module RscriptInvocation
             End If
             Try
                 Directory.SetCurrentDirectory(fullScriptPath) '
-                Shell(IIf(RAddin.debugScript, "cmd.exe /c ", "") + """" + rexec + """ " + script + IIf(RAddin.debugScript, " & pause", ""), AppWinStyle.NormalFocus, True)
+                Shell(IIf(RAddin.debugScript, "cmd.exe /c """, "") + """" + rexec + """ """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", ""), AppWinStyle.NormalFocus, True)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
             End Try
