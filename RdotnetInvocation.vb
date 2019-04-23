@@ -13,7 +13,7 @@ Module RdotnetInvocation
         ' only instantiate new engine if there is none already (reuse engine !)
         If IsNothing(rdotnetengine) Then
             Try
-                logInfo = NativeUtility.FindRPaths(rPath, rHome) + ", Is64BitProcess: " + System.Environment.Is64BitProcess.ToString()
+                logInfo = NativeUtility.CreateNew.FindRPaths(rPath, rHome) + ", Is64BitProcess: " + Environment.Is64BitProcess.ToString()
                 REngine.SetEnvironmentVariables(rPath:=rPath, rHome:=rHome)
                 rdotnetengine = REngine.GetInstance()
                 rdotnetengine.Initialize()

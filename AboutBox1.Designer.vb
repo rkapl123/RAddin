@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class AboutBox1
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -167,12 +167,12 @@ Partial Class AboutBox1
 
     End Sub
 
-    Friend WithEvents OKButton As Windows.Forms.Button
-    Friend WithEvents TextBoxDescription As Windows.Forms.TextBox
-    Friend WithEvents LabelCompanyName As Windows.Forms.Label
-    Friend WithEvents LabelCopyright As Windows.Forms.Label
-    Friend WithEvents LabelVersion As Windows.Forms.Label
-    Friend WithEvents LabelProductName As Windows.Forms.Label
-    Friend WithEvents LogoPictureBox As Windows.Forms.PictureBox
-    Friend WithEvents TableLayoutPanel As Windows.Forms.TableLayoutPanel
+    Friend WithEvents OKButton As System.Windows.Forms.Button
+    Friend WithEvents TextBoxDescription As System.Windows.Forms.TextBox
+    Friend WithEvents LabelCompanyName As System.Windows.Forms.Label
+    Friend WithEvents LabelCopyright As System.Windows.Forms.Label
+    Friend WithEvents LabelVersion As System.Windows.Forms.Label
+    Friend WithEvents LabelProductName As System.Windows.Forms.Label
+    Friend WithEvents LogoPictureBox As System.Windows.Forms.PictureBox
+    Friend WithEvents TableLayoutPanel As System.Windows.Forms.TableLayoutPanel
 End Class

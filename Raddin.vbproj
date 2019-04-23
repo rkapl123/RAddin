@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -13,7 +13,10 @@
     <AssemblyName>Raddin</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>Windows</MyType>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,6 +26,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DocumentationFile>Raddin.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>Full</DebugType>
@@ -33,6 +37,7 @@
     <DocumentationFile>Raddin.xml</DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugSymbols>true</DebugSymbols>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <OptionExplicit>On</OptionExplicit>
@@ -47,12 +52,12 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="DynamicInterop, Version=0.7.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\DynamicInterop.0.7.4\lib\net40\DynamicInterop.dll</HintPath>
+    <Reference Include="DynamicInterop, Version=0.8.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\DynamicInterop.0.8.1\lib\netstandard1.2\DynamicInterop.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="ExcelDna.Integration, Version=0.33.5730.40390, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\ExcelDna.Integration.0.33.9\lib\ExcelDna.Integration.dll</HintPath>
+    <Reference Include="ExcelDna.Integration, Version=0.34.6373.42344, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\ExcelDna.Integration.0.34.6\lib\ExcelDna.Integration.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.Office.Interop.Excel, Version=14.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
@@ -63,12 +68,12 @@
       <HintPath>packages\ExcelDna.Interop.14.0.1\lib\Microsoft.Vbe.Interop.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
-    <Reference Include="RDotNet, Version=1.6.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\R.NET.Community.1.6.5\lib\net40\RDotNet.dll</HintPath>
+    <Reference Include="RDotNet, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\R.NET.1.7.0\lib\net40\RDotNet.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="RDotNet.NativeLibrary, Version=1.6.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\R.NET.Community.1.6.5\lib\net40\RDotNet.NativeLibrary.dll</HintPath>
+    <Reference Include="RDotNet.NativeLibrary, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\R.NET.1.7.0\lib\net40\RDotNet.NativeLibrary.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -113,10 +118,16 @@
     <Compile Include="RAddin.vb" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Raddin-AddIn.dna">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="api\index.md" />
+    <None Include="articles\intro.md" />
+    <None Include="articles\toc.md" />
+    <None Include="docfx.json" />
+    <None Include="index.md" />
+    <None Include="Properties\ExcelDna.Build.props" />
+    <None Include="Raddin-AddIn.dna">
       <SubType>Designer</SubType>
-    </Content>
+    </None>
+    <None Include="toc.yml" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="Microsoft.Office.Core">
@@ -144,7 +155,10 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include=".gitignore" />
+    <Content Include="api\.gitignore" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AboutBox1.resx">
       <DependentUpon>AboutBox1.vb</DependentUpon>
@@ -157,12 +171,21 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(SolutionDir)\packages\ExcelDna.AddIn.0.33.9\tools\ExcelDna.xll" "$(TargetDir)Raddin-AddIn.xll*" /C /Y
-xcopy "$(TargetDir)Raddin-AddIn.dna*" "$(TargetDir)Raddin-AddIn64.dna*" /C /Y
-xcopy "$(SolutionDir)\packages\ExcelDna.AddIn.0.33.9\tools\ExcelDna64.xll" "$(TargetDir)Raddin-AddIn64.xll*" /C /Y
-"$(SolutionDir)\packages\ExcelDna.AddIn.0.33.9\tools\ExcelDnaPack.exe" "$(TargetDir)Raddin-AddIn.dna" /Y
-"$(SolutionDir)\packages\ExcelDna.AddIn.0.33.9\tools\ExcelDnaPack.exe" "$(TargetDir)Raddin-AddIn64.dna" /Y</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
+  <Import Project="packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna.AddIn.targets" Condition="Exists('packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna.AddIn.targets')" />
+  <Target Name="EnsureExcelDnaTargetsImported" BeforeTargets="BeforeBuild" Condition="'$(ExcelDnaTargetsImported)' == ''">
+    <Error Condition="!Exists('packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna.AddIn.targets') And ('$(RunExcelDnaBuild)' != '' And $(RunExcelDnaBuild))" Text="You are trying to build with ExcelDna, but the NuGet targets file that ExcelDna depends on is not available on this computer. This is probably because the ExcelDna package has not been committed to source control, or NuGet Package Restore is not enabled. Please enable NuGet Package Restore to download them. For more information, see http://go.microsoft.com/fwlink/?LinkID=317567." HelpKeyword="BCLBUILD2001" />
+    <Error Condition="Exists('packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna.AddIn.targets') And ('$(RunExcelDnaBuild)' != '' And $(RunExcelDnaBuild))" Text="ExcelDna cannot be run because NuGet packages were restored prior to the build running, and the targets file was unavailable when the build started. Please build the project again to include these packages in the build. You may also need to make sure that your build server does not delete packages prior to each build. For more information, see http://go.microsoft.com/fwlink/?LinkID=317568." HelpKeyword="BCLBUILD2002" />
+  </Target>
+  <Import Project="packages\docfx.console.2.40.11\build\docfx.console.targets" Condition="Exists('packages\docfx.console.2.40.11\build\docfx.console.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\docfx.console.2.40.11\build\docfx.console.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\docfx.console.2.40.11\build\docfx.console.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
