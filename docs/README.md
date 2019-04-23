@@ -77,9 +77,9 @@ and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the 
 Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
 
 ```XML
-  <appSettings file="O:\SOFTWARE\TRIT\MRO\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
-    <add key="ExePath" value="C:\Program Files\Microsoft\MRO\R-3.3.2\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
-    <add key="rHome" value="C:\Program Files\Microsoft\MRO\R-3.3.2\" /> : rHome for the RdotNet invocation method, to get the R-DLL-Path the rPath<bitness>bit setting below is used 
+  <appSettings file="O:\SOFTWARE\TRIT\R\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
+    <add key="ExePath" value="C:\Program Files\R\R-3.4.0\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
+    <add key="rHome" value="C:\Program Files\R\R-3.4.0" /> : rHome for the RdotNet invocation method, to get the R-DLL-Path the rPath<bitness>bit setting below is used 
     <add key="rPath64bit" value="bin\x64" /> : the folder for the 64 bit R-DLLs 
     <add key="rPath32bit" value="bin\i386" /> : the folder for the 32 bit R-DLLs
     <add key="presetSheetButtonsCount" value="24"/> : the preset maximum Button Count for Sheets (if you expect more sheets with Rdefinitions set it accordingly) 

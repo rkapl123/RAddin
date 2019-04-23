@@ -1,4 +1,4 @@
-Set /P answr=deploy (r)elease? 
+Set /P answr=deploy (r)elease (empty for debug)?
 set source=bin\Debug
 If "%answr%"=="r" (
 set source=bin\Release
