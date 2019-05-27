@@ -34,7 +34,7 @@ Public Class AddInEvents
         End If
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
-        'RAddin.removeResultsDiags()
+        RAddin.removeResultsDiags() ' remove results specified by rres
     End Sub
 
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen

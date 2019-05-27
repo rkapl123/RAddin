@@ -46,7 +46,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of an executable script. 
 - arg/arg[rc] (R input objects, txt files): R variable name and path/filename, where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
-- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed before saving
+- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed from excel before saving and rerunning the r script
 - diag (R output diagrams, png format): path/filename, where (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either ranges, where a script is stored (scriptrng) or directly as a cell value (text content or formula result) in the 2nd column (scriptcell)
 
@@ -58,6 +58,7 @@ In the 2nd column are the definition values as described above.
 
 In the 3rd column are the definition paths of the files referred to in arg, res and diag
 - Absolute Paths in dir or the definition path column are defined by starting with \\ or X:\ (X being a mapped drive letter)
+- not existing paths for arg, res, scriptrng/scriptcell and diag are created automatically, so dynamical paths can be given here.
 
 The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
 

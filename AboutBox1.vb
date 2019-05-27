@@ -17,7 +17,7 @@
         Me.TextBoxDescription.Text = My.Application.Info.Description
     End Sub
 
-    Private Sub OKButton_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles OKButton.Click
+    Private Sub OKButton_Click(ByVal sender As Object, ByVal e As EventArgs) Handles OKButton.Click
         Dim errStr As String
         errStr = RAddin.startRnamesRefresh()
         If Len(errStr) > 0 Then

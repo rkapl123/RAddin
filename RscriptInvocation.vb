@@ -46,11 +46,6 @@ Module RscriptInvocation
 
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
                 Dim curWbPrefix As String = IIf(Left(argdir, 2) = "\\" Or Mid(argdir, 2, 2) = ":\", "", currWb.Path + "\")
-                ' remove any existing input files...
-                If File.Exists(curWbPrefix + argdir + "\" + argFilename) Then
-                    File.Delete(curWbPrefix + argdir + "\" + argFilename)
-                End If
-
                 outputFile = New StreamWriter(curWbPrefix + argdir + "\" + argFilename)
                 ' make sure we're writing a dot decimal separator
                 Dim customCulture As System.Globalization.CultureInfo
@@ -113,11 +108,6 @@ Module RscriptInvocation
 
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
                 Dim curWbPrefix As String = IIf(Left(scriptRngdir, 2) = "\\" Or Mid(scriptRngdir, 2, 2) = ":\", "", currWb.Path + "\")
-                ' remove any existing input files...
-                If File.Exists(curWbPrefix + scriptRngdir + "\" + scriptRngFilename) Then
-                    File.Delete(curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
-                End If
-
                 outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename, False, Encoding.Default)
 
                 ' reuse the script invocation methods by setting the respective parameters
@@ -157,6 +147,7 @@ Module RscriptInvocation
     Public Function invokeScripts() As Boolean
         Dim script As String = vbNullString
         Dim scriptpath As String
+        Dim previousDir As String = Directory.GetCurrentDirectory()
 
         scriptpath = dirglobal
         For c As Integer = 0 To RdefDic("scripts").Length - 1
@@ -168,19 +159,18 @@ Module RscriptInvocation
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
             Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + scriptpath
-            If Not File.Exists(fullScriptPath + "\" + script) Then
-                If Not RAddin.myMsgBox("Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf) Then Return False
-            End If
-            If Not File.Exists(rexec) And rexec <> "cmd" Then
-                If Not RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf) Then Return False
-            End If
+
             Try
-                Directory.SetCurrentDirectory(fullScriptPath) '
+                Directory.SetCurrentDirectory(fullScriptPath)
                 Shell(IIf(RAddin.debugScript, "cmd.exe /c """, "") + """" + rexec + """ """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", ""), AppWinStyle.NormalFocus, True)
             Catch ex As Exception
+                ' reset current dir
+                Directory.SetCurrentDirectory(previousDir)
                 If Not RAddin.myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
             End Try
         Next
+        ' reset current dir
+        Directory.SetCurrentDirectory(previousDir)
         Return True
     End Function
 
@@ -189,6 +179,7 @@ Module RscriptInvocation
     Public Function getResults() As Boolean
         Dim resFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
+        Dim previousResultRange As Range = Nothing
         Dim errMsg As String = vbNullString
 
         readdir = dirglobal
@@ -203,6 +194,16 @@ Module RscriptInvocation
             If Not File.Exists(curWbPrefix + readdir + "\" + resFilename) Then
                 If Not RAddin.myMsgBox("Results file '" + curWbPrefix + readdir + "\" + resFilename + "' not found!") Then Return False
             End If
+            ' remove previous content, might not exist, so catch any exception
+            If RdefDic("rresults")(c) Then
+                Try
+                    previousResultRange = currWb.Names.Item("___RaddinResult" + RdefDic("results")(c)).RefersToRange
+                    previousResultRange.ClearContents()
+                    previousResultRange.Delete()
+                Catch ex As Exception
+                End Try
+            End If
+
             Try
                 Dim newQueryTable As QueryTable
                 newQueryTable = RDataRange.Worksheet.QueryTables.Add(Connection:="TEXT;" & curWbPrefix + readdir + "\" + resFilename, Destination:=RDataRange)
@@ -253,19 +254,19 @@ Module RscriptInvocation
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
-            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
-            If Not File.Exists(curWbPrefix + readdir + "\" + diagFilename) Then
-                If Not RAddin.myMsgBox("Diagram file '" + curWbPrefix + readdir + "\" + diagFilename + "' not found!") Then Return False
-            End If
-
-            ' clean previously set shapes...
+            ' clean previously set shape...
             For Each oldShape As Shape In RDataRange.Worksheet.Shapes
                 If oldShape.Name = diagFilename Then
                     oldShape.Delete()
                     Exit For
                 End If
             Next
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\readdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            If Not File.Exists(curWbPrefix + readdir + "\" + diagFilename) Then
+                If Not RAddin.myMsgBox("Diagram file '" + curWbPrefix + readdir + "\" + diagFilename + "' not found!") Then Return False
+            End If
+
             ' add new shape from picture
             Try
                 With RDataRange.Worksheet.Shapes.AddPicture(Filename:=curWbPrefix + readdir + "\" + diagFilename,
@@ -281,13 +282,60 @@ Module RscriptInvocation
 
     ' remove result, diagram and temporary R script files
     Public Function removeFiles() As Boolean
-        Dim filename As String = vbNullString, readdir As String
+        Dim filename As String = vbNullString
+        Dim readdir As String = dirglobal
         Dim RDataRange As Range = Nothing
         Dim errMsg As String = vbNullString
 
-        readdir = dirglobal
+        ' check for script existence before creating any potential missing folders below...
+        For c As Integer = 0 To RdefDic("scripts").Length - 1
+            Dim script As String = vbNullString
+            ' returns script and readdir !
+            errMsg = prepareParams(c, "scripts", Nothing, script, readdir, "")
+            If Len(errMsg) > 0 Then
+                If Not RAddin.myMsgBox(errMsg) Then Return False
+            End If
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            Dim fullScriptPath = curWbPrefix + readdir
+            If Not File.Exists(fullScriptPath + "\" + readdir) Then
+                RAddin.myMsgBox("Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf)
+                Return False
+            End If
+            If Not File.Exists(rexec) And rexec <> "cmd" Then
+                RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf)
+                Return False
+            End If
+        Next
+
+        ' remove input argument files
+        For c As Integer = 0 To RdefDic("args").Length - 1
+            ' returns filename and readdir !
+            errMsg = prepareParams(c, "args", RDataRange, filename, readdir, ".txt")
+            If Len(errMsg) > 0 Then
+                If Not RAddin.myMsgBox(errMsg) Then Return False
+            End If
+
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' special comfort: if containing folder doesn't exist, create it now:
+            If Not Directory.Exists(curWbPrefix + readdir) Then
+                Try
+                    Directory.CreateDirectory(curWbPrefix + readdir)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to create input arguments containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
+                End Try
+            End If
+            ' remove any existing input files...
+            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
+                File.Delete(curWbPrefix + readdir + "\" + filename)
+            End If
+        Next
+
         ' remove result files
         For c As Integer = 0 To RdefDic("results").Length - 1
+            ' returns filename and readdir !
             errMsg = prepareParams(c, "results", RDataRange, filename, readdir, ".txt")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
@@ -295,6 +343,14 @@ Module RscriptInvocation
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' special comfort: if containing folder doesn't exist, create it now:
+            If Not Directory.Exists(curWbPrefix + readdir) Then
+                Try
+                    Directory.CreateDirectory(curWbPrefix + readdir)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to create result containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
+                End Try
+            End If
             ' remove any existing result files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
@@ -306,13 +362,21 @@ Module RscriptInvocation
         Next
         ' remove diagram files
         For c As Integer = 0 To RdefDic("diags").Length - 1
+            ' returns filename and readdir !
             errMsg = prepareParams(c, "diags", RDataRange, filename, readdir, ".png")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
-
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' special comfort: if containing folder doesn't exist, create it now:
+            If Not Directory.Exists(curWbPrefix + readdir) Then
+                Try
+                    Directory.CreateDirectory(curWbPrefix + readdir)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to create diagram containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
+                End Try
+            End If
             ' remove any existing diagram files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
@@ -324,6 +388,7 @@ Module RscriptInvocation
         Next
         ' remove temporary R script files
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
+            ' returns filename and readdir !
             errMsg = prepareParams(c, "scriptrng", RDataRange, filename, readdir, ".R")
             If Len(errMsg) > 0 Then
                 filename = "RDataRangeRow" + c.ToString() + ".R"
@@ -331,6 +396,14 @@ Module RscriptInvocation
 
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' special comfort: if containing folder doesn't exist, create it now:
+            If Not Directory.Exists(curWbPrefix + readdir) Then
+                Try
+                    Directory.CreateDirectory(curWbPrefix + readdir)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to create script containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
+                End Try
+            End If
             ' remove any existing diagram files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try

@@ -90,6 +90,7 @@ Public Module RAddin
         For Each namedrange As Name In currWb.Names
             Dim cleanname As String = Replace(namedrange.Name, namedrange.Parent.Name & "!", "")
             If Left(cleanname, 7) = "R_Addin" Then
+                If InStr(namedrange.RefersTo, "#REF!") > 0 Then Return "Rdefinitions range " + namedrange.Parent.name + "!" + namedrange.Name + " contains #REF!"
                 If namedrange.RefersToRange.Columns.Count <> 3 Then Return "Rdefinitions range " + namedrange.Parent.name + "!" + namedrange.Name + " doesn't have 3 columns !"
                 ' final name of entry is without R_Addin and !
                 Dim finalname As String = Replace(Replace(namedrange.Name, "R_Addin", ""), "!", "")
@@ -211,7 +212,7 @@ Public Module RAddin
     Public Function removeResultsDiags() As Boolean
         For Each namedrange As Name In currWb.Names
             If Left(namedrange.Name, 15) = "___RaddinResult" Then
-                namedrange.RefersToRange.Clear()
+                namedrange.RefersToRange.ClearContents()
                 namedrange.Delete()
             End If
         Next
