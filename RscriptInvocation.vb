@@ -299,7 +299,7 @@ Module RscriptInvocation
             ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptpath
             Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + readdir
-            If Not File.Exists(fullScriptPath + "\" + readdir) Then
+            If Not File.Exists(fullScriptPath + "\" + script) Then
                 RAddin.myMsgBox("Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf)
                 Return False
             End If
