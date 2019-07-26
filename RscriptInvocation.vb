@@ -2,10 +2,15 @@
 Imports System.Text
 Imports Microsoft.Office.Interop.Excel
 
+''' <summary>all functions for the Rscript invocation method (by writing files and retrieving the results from files after invocation)</summary>
 Module RscriptInvocation
+    ''' <summary></summary>
     Public rexec As String
+    ''' <summary></summary>
+    Public rexecArgs As String
 
-    ' prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags 
+    ''' <summary>prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags </summary>
+    ''' <returns>True if success, False otherwise</returns>
     Private Function prepareParams(c As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
         Dim value As String = RdefDic(name)(c)
         ' only for args, results and diags (scripts dont have a target range)
@@ -28,8 +33,10 @@ Module RscriptInvocation
         Return vbNullString
     End Function
 
-    ' creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd" 
-    ' otherwise:  "what you see is what you get"
+    ''' <summary>creates Inputfiles for defined arg ranges, tab separated, decimalpoint always ".", dates are stored as "yyyy-MM-dd"
+    ''' otherwise: "what you see is what you get"
+    '''</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function storeArgs() As Boolean
         Dim argFilename As String = vbNullString, argdir As String
         Dim RDataRange As Range = Nothing
@@ -84,7 +91,8 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' creates script files for defined scriptRng ranges 
+    ''' <summary>creates script files for defined scriptRng ranges </summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function storeScriptRng() As Boolean
         Dim scriptRngFilename As String = vbNullString, scriptText = vbNullString
         Dim RDataRange As Range = Nothing
@@ -143,7 +151,8 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' invokes current scripts/args/results definition
+    ''' <summary>invokes current scripts/args/results definition</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function invokeScripts() As Boolean
         Dim script As String = vbNullString
         Dim scriptpath As String
@@ -160,9 +169,9 @@ Module RscriptInvocation
             Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + scriptpath
 
-            Try
+            Try ' + """"
                 Directory.SetCurrentDirectory(fullScriptPath)
-                Shell(IIf(RAddin.debugScript, "cmd.exe /c """, "") + """" + rexec + """ """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", ""), AppWinStyle.NormalFocus, True)
+                Shell(IIf(RAddin.debugScript, "cmd.exe /c """, "") + RscriptInvocation.rexec + " " + RscriptInvocation.rexecArgs + " """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", ""), AppWinStyle.NormalFocus, True)
             Catch ex As Exception
                 ' reset current dir
                 Directory.SetCurrentDirectory(previousDir)
@@ -174,8 +183,10 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' get Outputfiles for defined results ranges, tab separated
-    ' otherwise:  "what you see is what you get"
+    ''' <summary>get Outputfiles for defined results ranges, tab separated
+    ''' otherwise:  "what you see is what you get"
+    ''' </summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function getResults() As Boolean
         Dim resFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
@@ -242,7 +253,8 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' get Output diagrams (png) for defined diags ranges
+    ''' <summary>get Output diagrams (png) for defined diags ranges</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function getDiags() As Boolean
         Dim diagFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
@@ -280,7 +292,8 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ' remove result, diagram and temporary R script files
+    ''' <summary>remove result, diagram and temporary R script files</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function removeFiles() As Boolean
         Dim filename As String = vbNullString
         Dim readdir As String = dirglobal
@@ -303,9 +316,23 @@ Module RscriptInvocation
                 RAddin.myMsgBox("Script '" + fullScriptPath + "\" + script + "' not found!" + vbCrLf)
                 Return False
             End If
-            If Not File.Exists(rexec) And rexec <> "cmd" Then
-                RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf)
-                Return False
+            ' check if executable exists or exists somewhere in the path....
+            Dim foundExe As Boolean = False
+            Dim exe As String = Environment.ExpandEnvironmentVariables(rexec)
+            If Not File.Exists(exe) Then
+                If Path.GetDirectoryName(exe) = String.Empty Then
+                    For Each test In (Environment.GetEnvironmentVariable("PATH")).Split(";")
+                        Dim thePath As String = test.Trim()
+                        If Len(thePath) > 0 And File.Exists(Path.Combine(thePath, exe)) Then
+                            foundExe = True
+                            Exit For
+                        End If
+                    Next
+                    If Not foundExe Then
+                        RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf)
+                        Return False
+                    End If
+                End If
             End If
         Next
 

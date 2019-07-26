@@ -1,26 +1,38 @@
 ﻿Imports Microsoft.Office.Interop.Excel
 Imports System.Configuration
 
+''' <summary>The main functions for working with RDefinitions (named ranges in Excel) and starting the R processes (writing input, invoking R scripts and retrievng results)</summary>
 Public Module RAddin
 
+    ''' <summary></summary>
     Public currWb As Workbook
+    ''' <summary></summary>
     Public Rdefinitions As Range
+    ''' <summary></summary>
     Public Rcalldefnames As String() = {}
+    ''' <summary></summary>
     Public Rcalldefs As Range() = {}
+    ''' <summary></summary>
     Public rdefsheetColl As Dictionary(Of String, Dictionary(Of String, Range))
+    ''' <summary></summary>
     Public rdefsheetMap As Dictionary(Of String, String)
+    ''' <summary></summary>
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
+    ''' <summary></summary>
     Public avoidFurtherMsgBoxes As Boolean
+    ''' <summary></summary>
     Public dirglobal As String
+    ''' <summary></summary>
     Public debugScript As Boolean
+    ''' <summary></summary>
     Public dropDownSelected As Boolean
 
-    ' definitions of current R invocation (scripts, args, results, diags...)
+    ''' <summary>definitions of current R invocation (scripts, args, results, diags...)</summary>
     Public RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
 
-    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    ' startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)
-    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    ''' <summary>startRprocess: started from GUI (button) and accessible from VBA (via Application.Run)</summary>
+    ''' <param name="runShell"></param>
+    ''' <param name="runRdotNet"></param>
     Public Function startRprocess(runShell As Boolean, runRdotNet As Boolean) As String
         Dim errStr As String
         avoidFurtherMsgBoxes = False
@@ -55,7 +67,9 @@ Public Module RAddin
         Return vbNullString
     End Function
 
-    ' Msgbox that avoids further Msgboxes (click Yes) or cancels run altogether (click Cancel)
+    ''' <summary>Msgbox that avoids further Msgboxes (click Yes) or cancels run altogether (click Cancel)</summary>
+    ''' <param name="message"></param>
+    ''' <returns>True if further Msgboxes should be avoided, False otherwise</returns>
     Public Function myMsgBox(message As String) As Boolean
         If avoidFurtherMsgBoxes Then Return True
         Dim retval As MsgBoxResult = MsgBox(message + vbCrLf + "Avoid further Messages (Yes/No) or abort Rdefinition (Cancel)", MsgBoxStyle.YesNoCancel)
@@ -63,7 +77,8 @@ Public Module RAddin
         Return (retval = MsgBoxResult.Yes Or retval = MsgBoxResult.No)
     End Function
 
-    ' refresh Rnames from Workbook on demand (currently when invoking about box)
+    ''' <summary>refresh Rnames from Workbook on demand (currently when invoking about box)</summary>
+    ''' <returns></returns>
     Public Function startRnamesRefresh() As String
         Dim errStr As String
         If currWb Is Nothing Then Return "No Workbook active to refresh RNames from..."
@@ -80,7 +95,8 @@ Public Module RAddin
         Return vbNullString
     End Function
 
-    ' gets defined named ranges for R script invocation in the current workbook 
+    ''' <summary>gets defined named ranges for R script invocation in the current workbook</summary>
+    ''' <returns></returns>
     Public Function getRNames() As String
         ReDim Preserve Rcalldefnames(-1)
         ReDim Preserve Rcalldefs(-1)
@@ -125,6 +141,7 @@ Public Module RAddin
         Return vbNullString
     End Function
 
+    ''' <summary>reset all RDefinition representations</summary>
     Public Sub resetRDefinitions()
         RdefDic("args") = {}
         RdefDic("argsrc") = {}
@@ -141,7 +158,8 @@ Public Module RAddin
         rPath = Nothing : rexec = Nothing : dirglobal = vbNullString
     End Sub
 
-    ' gets definitions from  current selected R script invocation range (Rdefinitions)
+    ''' <summary>gets definitions from current selected R script invocation range (Rdefinitions)</summary>
+    ''' <returns></returns>
     Public Function getRDefinitions() As String
         resetRDefinitions()
         Try
@@ -152,6 +170,7 @@ Public Module RAddin
                 deffilepath = defRow.Cells(1, 3).Value2
                 If deftype = "rexec" Then ' setting for shell innvocation
                     RscriptInvocation.rexec = defval
+                    RscriptInvocation.rexecArgs = deffilepath
                 ElseIf deftype = "rpath" Then ' setting for RdotNet
                     RdotnetInvocation.rPath = defval
                 ElseIf deftype = "arg" Or deftype = "argr" Or deftype = "argc" Or deftype = "argrc" Or deftype = "argcr" Then
@@ -208,15 +227,14 @@ Public Module RAddin
         Return vbNullString
     End Function
 
-    ' remove results in all result Ranges (before saving)
-    Public Function removeResultsDiags() As Boolean
+    ''' <summary>remove results in all result Ranges (before saving)</summary>
+    Public Sub removeResultsDiags()
         For Each namedrange As Name In currWb.Names
             If Left(namedrange.Name, 15) = "___RaddinResult" Then
                 namedrange.RefersToRange.ClearContents()
                 namedrange.Delete()
             End If
         Next
-        Return True
-    End Function
+    End Sub
 
 End Module

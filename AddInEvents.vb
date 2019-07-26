@@ -1,23 +1,24 @@
 ﻿Imports ExcelDna.Integration
 Imports Microsoft.Office.Interop.Excel
 
-' Events from Excel (Workbook_Save ...)
+''' <summary>Events from Excel (Workbook_Save ...)</summary>
 Public Class AddInEvents
     Implements IExcelAddIn
 
+    ''' <summary>the Application object for event registration</summary>
     WithEvents Application As Application
 
-    ' connect to Excel when opening Addin
+    ''' <summary>connect to Excel when opening Addin</summary>
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
     End Sub
 
-    ' clean up when Raddin is deactivated
+    ''' <summary>clean up when Raddin is deactivated</summary>
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
         If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
     End Sub
 
-    ' save arg ranges to text files as well 
+    ''' <summary>save arg ranges to text files as well </summary>
     Private Sub Workbook_Save(Wb As Workbook, ByVal SaveAsUI As Boolean, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeSave
         Dim errStr As String
         ' avoid resetting Rdefinition when dropdown selected for a specific RDefinition !
@@ -37,11 +38,11 @@ Public Class AddInEvents
         RAddin.removeResultsDiags() ' remove results specified by rres
     End Sub
 
+    ''' <summary>refresh ribbon is being treated in Workbook_Activate...</summary>
     Private Sub Workbook_Open(Wb As Workbook) Handles Application.WorkbookOpen
-        ' is being treated in Workbook_Activate...
     End Sub
 
-    ' refresh ribbon with current workbook's Rnames
+    ''' <summary>refresh ribbon with current workbook's Rnames</summary>
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
         errStr = doDefinitions(Wb)
@@ -54,7 +55,7 @@ Public Class AddInEvents
         RAddin.theRibbon.Invalidate()
     End Sub
 
-    ' get Rnames of current workbook and load Rdefinitions of first name in R_Addin Names
+    ''' <summary>get Rnames of current workbook and load Rdefinitions of first name in R_Addin Names</summary>
     Private Function doDefinitions(Wb As Workbook) As String
         Dim errStr As String
         currWb = Wb
@@ -72,6 +73,7 @@ Public Class AddInEvents
         Return vbNullString
     End Function
 
+    ''' <summary>Close Workbook: remove reference to current Workbook</summary>
     Private Sub Application_WorkbookBeforeClose(Wb As Workbook, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeClose
         currWb = Nothing
     End Sub

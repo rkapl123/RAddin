@@ -2,14 +2,16 @@
 Imports ExcelDna.Integration.CustomUI
 Imports System.Configuration
 
-' Events from Ribbon
+''' <summary>Events from Ribbon</summary>
 <ComVisible(True)>
 Public Class RAddinRibbon
     Inherits ExcelRibbon
-
+    ''' <summary></summary>
     Public runShell As Boolean
+    ''' <summary></summary>
     Public runRdotNet As Boolean
 
+    ''' <summary></summary>
     Public Sub startRprocess(control As IRibbonControl)
         Dim errStr As String
         ' set Rdefinition to invocaters range... invocating sheet is put into Tag
@@ -20,7 +22,8 @@ Public Class RAddinRibbon
         If errStr <> "" Then MsgBox(errStr)
     End Sub
 
-    ' reflect the change in the togglebuttons title
+    ''' <summary>reflect the change in the togglebuttons title</summary>
+    ''' <returns></returns>
     Public Function getImage(control As IRibbonControl) As String
         If (runShell And control.Id = "shell") Or (runRdotNet And control.Id = "rdotnet") Or (RAddin.debugScript And control.Id = "debug") Then
             Return "AcceptTask"
@@ -29,7 +32,8 @@ Public Class RAddinRibbon
         End If
     End Function
 
-    ' reflect the change in the togglebuttons title
+    ''' <summary>reflect the change in the togglebuttons title</summary>
+    ''' <returns>True for the respective control if activated</returns>
     Public Function getPressed(control As IRibbonControl) As Boolean
         If control.Id = "shell" Then
             Return runShell
@@ -42,7 +46,8 @@ Public Class RAddinRibbon
         End If
     End Function
 
-    ' toggle shell or Rdotnet mode buttons
+    ''' <summary>toggle shell or Rdotnet mode buttons</summary>
+    ''' <param name="pressed"></param>
     Public Sub toggleButton(control As IRibbonControl, pressed As Boolean)
         If control.Id = "shell" Then
             runShell = pressed
@@ -55,23 +60,31 @@ Public Class RAddinRibbon
         RAddin.theRibbon.InvalidateControl(control.Id)
     End Sub
 
+    ''' <summary></summary>
     Public Sub refreshRdefs(control As IRibbonControl)
         Dim myAbout As AboutBox1 = New AboutBox1
         myAbout.ShowDialog()
     End Sub
 
+    ''' <summary></summary>
+    ''' <returns></returns>
     Public Function GetItemCount(control As IRibbonControl) As Integer
         Return (RAddin.Rcalldefnames.Length)
     End Function
 
+    ''' <summary></summary>
+    ''' <returns></returns>
     Public Function GetItemLabel(control As IRibbonControl, index As Integer) As String
         Return RAddin.Rcalldefnames(index)
     End Function
 
+    ''' <summary></summary>
+    ''' <returns></returns>
     Public Function GetItemID(control As IRibbonControl, index As Integer) As String
         Return RAddin.Rcalldefnames(index)
     End Function
 
+    ''' <summary></summary>
     Public Sub selectItem(control As IRibbonControl, id As String, index As Integer)
         ' needed for workbook save (saves selected Rdefinition)
         RAddin.dropDownSelected = True
@@ -80,6 +93,7 @@ Public Class RAddinRibbon
         RAddin.Rdefinitions.Select()
     End Sub
 
+    ''' <summary></summary>
     Public Sub ribbonLoaded(myribbon As IRibbonUI)
         RAddin.theRibbon = myribbon
         ' set default run via methods ..
@@ -91,7 +105,8 @@ Public Class RAddinRibbon
         End Try
     End Sub
 
-    ' creates the Ribbon <buttonGroup id='buttonGroup'> <box id='box2' boxStyle='horizontal'>
+    ''' <summary>creates the Ribbon</summary>
+    ''' <returns></returns>
     Public Overrides Function GetCustomUI(RibbonID As String) As String
         Dim customUIXml As String = "<customUI xmlns='http://schemas.microsoft.com/office/2006/01/customui' onLoad='ribbonLoaded' ><ribbon><tabs><tab id='RaddinTab' label='R Addin'>" +
             "<group id='RaddinGroup' label='General settings'>" +
@@ -115,13 +130,15 @@ Public Class RAddinRibbon
         Return customUIXml
     End Function
 
-    ' set the name of the WB/sheet dropdown to the sheet name (for the WB dropdown this is the WB name) 
+    ''' <summary>set the name of the WB/sheet dropdown to the sheet name (for the WB dropdown this is the WB name)</summary>
+    ''' <returns></returns>
     Public Function getSheetLabel(control As IRibbonControl) As String
         getSheetLabel = vbNullString
         If RAddin.rdefsheetMap.ContainsKey(control.Id) Then getSheetLabel = RAddin.rdefsheetMap(control.Id)
     End Function
 
-    ' create the buttons in the WB/sheet dropdown
+    ''' <summary>create the buttons in the WB/sheet dropdown</summary>
+    ''' <returns></returns>
     Public Function getDynMenContent(control As IRibbonControl) As String
         Dim xmlString As String = "<menu xmlns='http://schemas.microsoft.com/office/2009/07/customui'>"
         Dim currentSheet As String = RAddin.rdefsheetMap(control.Id)
@@ -132,7 +149,8 @@ Public Class RAddinRibbon
         Return xmlString
     End Function
 
-    ' shows the sheet button only if it was collected...
+    ''' <summary>shows the sheet button only if it was collected...</summary>
+    ''' <returns></returns>
     Public Function getDynMenVisible(control As IRibbonControl) As Boolean
         Return RAddin.rdefsheetMap.ContainsKey(control.Id)
     End Function

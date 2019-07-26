@@ -2,12 +2,17 @@
 Imports RDotNet.NativeLibrary
 Imports Microsoft.Office.Interop.Excel
 
+''' <summary>all functions for the Rdotnet invocation method (here the scripts and input args are passed to an inmemory engine and results are retrieved from there with one exception: graphics are still taken from the filesystem)</summary>
 Module RdotnetInvocation
+    ''' <summary></summary>
     Public rDotNetEngine As REngine = Nothing
+    ''' <summary></summary>
     Public rPath As String
+    ''' <summary></summary>
     Public rHome As String
 
-    ' initialize RdotNet engine
+    '''<summary>initialize RdotNet engine</summary> 
+    ''' <returns>True if success, False otherwise</returns>
     Public Function initializeRDotNet() As Boolean
         ' only instantiate new engine if there is none already (reuse engine !)
         If IsNothing(rDotNetEngine) Then
@@ -22,7 +27,8 @@ Module RdotnetInvocation
         Return True
     End Function
 
-    ' import arguments into RdotNetEngine
+    ''' <summary>import arguments into RdotNetEngine</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function storeArgs() As Boolean
         For c As Integer = 0 To RdefDic("args").Length - 1
             Dim argname As String = RdefDic("args")(c)
@@ -70,6 +76,8 @@ Module RdotnetInvocation
         Return True
     End Function
 
+    ''' <summary>invokes current range stored scripts/args/results</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function invokeExcelScripts() As Boolean
         ' then evaluate excel stored scripts
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
@@ -114,6 +122,8 @@ Module RdotnetInvocation
         Return True
     End Function
 
+    ''' <summary>invokes current filesystem stored scripts/args/results</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function invokeFileSysScripts() As Boolean
         ' then evaluate filesystem stored scripts
         Dim scriptpath As String = dirglobal
@@ -131,6 +141,11 @@ Module RdotnetInvocation
         Return True
     End Function
 
+
+    ''' <summary>get Outputfiles for defined results ranges, tab separated
+    ''' otherwise:  "what you see is what you get"
+    ''' </summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function getResults() As Boolean
         ' then evaluate (return) resultnames
         For c As Integer = 0 To RdefDic("results").Length - 1
@@ -213,6 +228,8 @@ Module RdotnetInvocation
         Return True
     End Function
 
+    ''' <summary>get Output diagrams (png) for defined diags ranges</summary>
+    ''' <returns>True if success, False otherwise</returns>
     Public Function getDiags() As Boolean
         'currently implemented as workaround via file creation...
         Return RscriptInvocation.getDiags()

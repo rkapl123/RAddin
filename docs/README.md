@@ -41,7 +41,7 @@ So for the 8 definitions (range names) currently defined in the test workbook te
 - Test_scriptRngScriptRange 
 
 In the 1st column of the Rdefinition range are the definition types, possible types are 
-- rexec: full path to an executable, being able to shell-run the script in line "script" (usually Rscript.exe). When running cmd shell files a special entry "cmd" is used for rexec. Only needed when overriding the ExePath in the AppSettings in the Raddin-AddIn-packed.xll.config file.
+- rexec: an executable, being able to shell-run the script in line "script" (usually Rscript.exe, but can be any executable). This is only needed when overriding the ExePath in the AppSettings in the Raddin-AddIn-packed.xll.config file.
 - rpath: path to the folder with the R dlls, in case you want to use the in-memory option with RDotNet. Only needed when overriding the RPath in the AppSettings in the Raddin-AddIn-packed.xll.config file. 
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of an executable script. 
@@ -55,12 +55,15 @@ Scripts (defined with the script, scriptrng or scriptcell definition types) are 
 In the 2nd column are the definition values as described above.
 - For arg, res, scriptrng and diag these are range names referring to the respective ranges to be taken as arg, res, scriptrng or diag target in the excel workbook.
 - The range names that are referred in arg, res, scriptrng and diag types can also be either workbook global (having no ! in front of the name) or worksheet local (having the worksheet name + ! in front of the name)
+- for rexec this can either be the full path for the executable, or - in case the executable is already in the path - a simple filename (like cmd.exe or perl.exe)
 
 In the 3rd column are the definition paths of the files referred to in arg, res and diag
 - Absolute Paths in dir or the definition path column are defined by starting with \\ or X:\ (X being a mapped drive letter)
 - not existing paths for arg, res, scriptrng/scriptcell and diag are created automatically, so dynamical paths can be given here.
+- for rexec, additional commandline switches can be passed here to the executable (like "/c" for cmd.exe, this is required to start the subsequent script)
 
-The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab.
+The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab and clicking "refresh Rdefinitions":  
+![Image of screenshot2](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot2.png)
 
 When saving the Workbook the input arguments (definition with arg) defined in the currently selected Rdefinition dropdown are stored as well. If nothing is selected, the first Rdefinition of the dropdown is chosen.
 
