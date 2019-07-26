@@ -14,7 +14,7 @@ Public Class AddInEvents
 
     ' clean up when Raddin is deactivated
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
-        If RdotnetInvocation.rdotnetengine IsNot Nothing Then RdotnetInvocation.rdotnetengine.Dispose()
+        If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
     End Sub
 
     ' save arg ranges to text files as well 

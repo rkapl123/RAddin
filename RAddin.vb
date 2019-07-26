@@ -113,7 +113,7 @@ Public Module RAddin
                     scriptColl.Add(nodeName, namedrange.RefersToRange)
                     rdefsheetColl.Add(namedrange.Parent.Name, scriptColl)
                     rdefsheetMap.Add("ID" + i.ToString(), namedrange.Parent.Name)
-                    i = i + 1
+                    i += 1
                 Else
                     ' add rdefinition to existing sheet "menu"
                     scriptColl = rdefsheetColl(namedrange.Parent.Name)

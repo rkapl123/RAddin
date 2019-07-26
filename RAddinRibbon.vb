@@ -111,7 +111,7 @@ Public Class RAddinRibbon
                                             "screentip='Select script to run' " +
                                             "getContent='getDynMenContent' getVisible='getDynMenVisible'/>"
         Next
-        customUIXml = customUIXml + "</group></tab></tabs></ribbon></customUI>"
+        customUIXml += "</group></tab></tabs></ribbon></customUI>"
         Return customUIXml
     End Function
 
@@ -128,7 +128,7 @@ Public Class RAddinRibbon
         For Each nodeName As String In RAddin.rdefsheetColl(currentSheet).Keys
             xmlString = xmlString + "<button id='" + nodeName + "' label='run " + nodeName + "' imageMso='SignatureLineInsert' onAction='startRprocess' tag ='" + currentSheet + "' screentip='run " + nodeName + " Rdefinition' supertip='runs R script defined in " + nodeName + " R_Addin range on sheet " + currentSheet + "' />"
         Next
-        xmlString = xmlString + "</menu>"
+        xmlString += "</menu>"
         Return xmlString
     End Function
 

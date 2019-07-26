@@ -3,22 +3,20 @@ Imports RDotNet.NativeLibrary
 Imports Microsoft.Office.Interop.Excel
 
 Module RdotnetInvocation
-    Public rdotnetengine As REngine = Nothing
+    Public rDotNetEngine As REngine = Nothing
     Public rPath As String
     Public rHome As String
 
     ' initialize RdotNet engine
     Public Function initializeRDotNet() As Boolean
-        Dim logInfo As String = vbNullString
         ' only instantiate new engine if there is none already (reuse engine !)
-        If IsNothing(rdotnetengine) Then
+        If IsNothing(rDotNetEngine) Then
             Try
-                logInfo = NativeUtility.CreateNew.FindRPaths(rPath, rHome) + ", Is64BitProcess: " + Environment.Is64BitProcess.ToString()
                 REngine.SetEnvironmentVariables(rPath:=rPath, rHome:=rHome)
-                rdotnetengine = REngine.GetInstance()
-                rdotnetengine.Initialize()
+                rDotNetEngine = REngine.GetInstance()
+                rDotNetEngine.Initialize()
             Catch ex As Exception
-                If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",logInfo from FindRPaths: " + logInfo) Then Return False
+                If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",FindRPaths Log: " + (New NativeUtility(Nothing)).FindRPaths(rPath, rHome)) Then Return False
             End Try
         End If
         Return True
@@ -56,15 +54,15 @@ Module RdotnetInvocation
                                 columnValues(i - 1 - rowOffset) = IIf(RDataRange(i, j).Value2 IsNot Nothing, IIf(IsNumeric(RDataRange(i, j).Value2), Replace(RDataRange(i, j).Value2, ",", "."), RDataRange(i, j).Value2), Nothing)
                             End If
                         End If
-                        i = i + 1
+                        i += 1
                     Loop Until i > RDataRange.Rows.Count
                     dfDataColumns(j - 1) = columnValues
-                    j = j + 1
+                    j += 1
                 Loop Until j > RDataRange.Columns.Count
                 ' write the dfDataColumns to rdotnet dataframe
-                Dim targetArg As RDotNet.DataFrame = rdotnetengine.CreateDataFrame(dfDataColumns, columnNames:=IIf(InStr(rowcolumn, "c"), columnNames, Nothing), rowNames:=IIf(InStr(rowcolumn, "r"), rowNames, Nothing))
+                Dim targetArg As RDotNet.DataFrame = rDotNetEngine.CreateDataFrame(dfDataColumns, columnNames:=IIf(InStr(rowcolumn, "c"), columnNames, Nothing), rowNames:=IIf(InStr(rowcolumn, "r"), rowNames, Nothing))
                 ' set the symbol to the correct name
-                rdotnetengine.SetSymbol(argname, targetArg)
+                rDotNetEngine.SetSymbol(argname, targetArg)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when creating RdotNet arg '" + argname + "', " + ex.Message) Then Return False
             End Try
@@ -89,7 +87,7 @@ Module RdotnetInvocation
 
             If Not IsNothing(scriptText) Then
                 Try
-                    rdotnetengine.Evaluate(scriptText)
+                    rDotNetEngine.Evaluate(scriptText)
                 Catch ex As Exception
                     If Not RAddin.myMsgBox("Error occured when evaluating script '" + scriptText + "', " + ex.Message) Then Return False
                 End Try
@@ -102,14 +100,14 @@ Module RdotnetInvocation
                         Do
                             Try
                                 evalLine = RDataRange(i, j).Value2
-                                rdotnetengine.Evaluate(evalLine)
+                                rDotNetEngine.Evaluate(evalLine)
                             Catch ex As Exception
                                 If Not RAddin.myMsgBox("Error occured when evaluating script line '" + evalLine + "', " + ex.Message) Then Return False
                             End Try
-                            j = j + 1
+                            j += 1
                         Loop Until j > RDataRange.Columns.Count
                     End If
-                    i = i + 1
+                    i += 1
                 Loop Until i > RDataRange.Rows.Count
             End If
         Next
@@ -125,7 +123,7 @@ Module RdotnetInvocation
 
             Dim scriptname As String = RdefDic("scripts")(c)
             Try
-                rdotnetengine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
+                rDotNetEngine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when evaluating script '" + curWbPrefix + scriptpath + "\" + scriptname + "', " + ex.Message) Then Return False
             End Try
@@ -148,7 +146,7 @@ Module RdotnetInvocation
             Dim rowNames As Object = Nothing
             Dim columnCount As Integer : Dim rowCount As Integer
             Try
-                resultDataSymbolicExpr = rdotnetengine.Evaluate(resname)
+                resultDataSymbolicExpr = rDotNetEngine.Evaluate(resname)
                 If resultDataSymbolicExpr.IsDataFrame() Then
                     resultData = resultDataSymbolicExpr.AsDataFrame()
                     columnNames = resultDataSymbolicExpr.AsDataFrame().ColumnNames
@@ -187,7 +185,7 @@ Module RdotnetInvocation
                 Catch ex As Exception
                     If Not RAddin.myMsgBox("Error occured when putting headers from '" + resname + "', " + ex.Message) Then Return False
                 End Try
-                j = j + 1
+                j += 1
             Loop Until j > columnCount - 1
 
             Dim i As Integer = 0
@@ -206,10 +204,10 @@ Module RdotnetInvocation
                         Catch ex As Exception
                             If Not RAddin.myMsgBox("Error occured when putting result '" + resname + "', " + ex.Message) Then Return False
                         End Try
-                        j = j + 1
+                        j += 1
                     Loop Until j > columnCount - 1 + columnOffset
                 End If
-                i = i + 1
+                i += 1
             Loop Until i > rowCount - 1
         Next
         Return True

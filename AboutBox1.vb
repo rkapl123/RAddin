@@ -18,6 +18,14 @@
     End Sub
 
     Private Sub OKButton_Click(ByVal sender As Object, ByVal e As EventArgs) Handles OKButton.Click
+        Me.Close()
+    End Sub
+
+    Private Sub LabelCompanyName_Click(sender As Object, e As EventArgs) Handles LabelCompanyName.Click
+        Process.Start(My.Application.Info.CompanyName)
+    End Sub
+
+    Private Sub refreshRDef_Click(sender As Object, e As EventArgs) Handles refreshRDef.Click
         Dim errStr As String
         errStr = RAddin.startRnamesRefresh()
         If Len(errStr) > 0 Then
@@ -29,10 +37,5 @@
                 MsgBox("refreshed Rnames from current Workbook !")
             End If
         End If
-        Me.Close()
-    End Sub
-
-    Private Sub LabelCompanyName_Click(sender As Object, e As EventArgs) Handles LabelCompanyName.Click
-        Process.Start(My.Application.Info.CompanyName)
     End Sub
 End Class

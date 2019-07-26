@@ -31,6 +31,7 @@ Partial Class AboutBox1
         Me.LabelProductName = New System.Windows.Forms.Label()
         Me.LogoPictureBox = New System.Windows.Forms.PictureBox()
         Me.TableLayoutPanel = New System.Windows.Forms.TableLayoutPanel()
+        Me.refreshRDef = New System.Windows.Forms.Button()
         CType(Me.LogoPictureBox, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.TableLayoutPanel.SuspendLayout()
         Me.SuspendLayout()
@@ -47,19 +48,20 @@ Partial Class AboutBox1
         '
         'TextBoxDescription
         '
+        Me.TableLayoutPanel.SetColumnSpan(Me.TextBoxDescription, 2)
         Me.TextBoxDescription.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TextBoxDescription.Location = New System.Drawing.Point(78, 103)
         Me.TextBoxDescription.Margin = New System.Windows.Forms.Padding(6, 3, 3, 3)
         Me.TextBoxDescription.Multiline = True
         Me.TextBoxDescription.Name = "TextBoxDescription"
         Me.TextBoxDescription.ReadOnly = True
-        Me.TextBoxDescription.ScrollBars = System.Windows.Forms.ScrollBars.Both
         Me.TextBoxDescription.Size = New System.Drawing.Size(315, 123)
         Me.TextBoxDescription.TabIndex = 0
         Me.TextBoxDescription.TabStop = False
         '
         'LabelCompanyName
         '
+        Me.TableLayoutPanel.SetColumnSpan(Me.LabelCompanyName, 2)
         Me.LabelCompanyName.Dock = System.Windows.Forms.DockStyle.Fill
         Me.LabelCompanyName.Location = New System.Drawing.Point(78, 75)
         Me.LabelCompanyName.Margin = New System.Windows.Forms.Padding(6, 0, 3, 0)
@@ -72,6 +74,7 @@ Partial Class AboutBox1
         '
         'LabelCopyright
         '
+        Me.TableLayoutPanel.SetColumnSpan(Me.LabelCopyright, 2)
         Me.LabelCopyright.Dock = System.Windows.Forms.DockStyle.Fill
         Me.LabelCopyright.Location = New System.Drawing.Point(78, 50)
         Me.LabelCopyright.Margin = New System.Windows.Forms.Padding(6, 0, 3, 0)
@@ -84,6 +87,7 @@ Partial Class AboutBox1
         '
         'LabelVersion
         '
+        Me.TableLayoutPanel.SetColumnSpan(Me.LabelVersion, 2)
         Me.LabelVersion.Dock = System.Windows.Forms.DockStyle.Fill
         Me.LabelVersion.Location = New System.Drawing.Point(78, 25)
         Me.LabelVersion.Margin = New System.Windows.Forms.Padding(6, 0, 3, 0)
@@ -96,6 +100,7 @@ Partial Class AboutBox1
         '
         'LabelProductName
         '
+        Me.TableLayoutPanel.SetColumnSpan(Me.LabelProductName, 2)
         Me.LabelProductName.Dock = System.Windows.Forms.DockStyle.Fill
         Me.LabelProductName.Location = New System.Drawing.Point(78, 0)
         Me.LabelProductName.Margin = New System.Windows.Forms.Padding(6, 0, 3, 0)
@@ -120,16 +125,18 @@ Partial Class AboutBox1
         '
         'TableLayoutPanel
         '
-        Me.TableLayoutPanel.ColumnCount = 2
-        Me.TableLayoutPanel.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 18.43434!))
-        Me.TableLayoutPanel.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 81.56566!))
+        Me.TableLayoutPanel.ColumnCount = 3
+        Me.TableLayoutPanel.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
+        Me.TableLayoutPanel.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100.0!))
+        Me.TableLayoutPanel.ColumnStyles.Add(New System.Windows.Forms.ColumnStyle())
         Me.TableLayoutPanel.Controls.Add(Me.LogoPictureBox, 0, 0)
         Me.TableLayoutPanel.Controls.Add(Me.LabelProductName, 1, 0)
         Me.TableLayoutPanel.Controls.Add(Me.LabelVersion, 1, 1)
         Me.TableLayoutPanel.Controls.Add(Me.LabelCopyright, 1, 2)
         Me.TableLayoutPanel.Controls.Add(Me.LabelCompanyName, 1, 3)
         Me.TableLayoutPanel.Controls.Add(Me.TextBoxDescription, 1, 4)
-        Me.TableLayoutPanel.Controls.Add(Me.OKButton, 1, 5)
+        Me.TableLayoutPanel.Controls.Add(Me.OKButton, 2, 5)
+        Me.TableLayoutPanel.Controls.Add(Me.refreshRDef, 1, 5)
         Me.TableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TableLayoutPanel.Location = New System.Drawing.Point(9, 9)
         Me.TableLayoutPanel.Name = "TableLayoutPanel"
@@ -140,9 +147,18 @@ Partial Class AboutBox1
         Me.TableLayoutPanel.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10.0!))
         Me.TableLayoutPanel.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50.0!))
         Me.TableLayoutPanel.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10.0!))
-        Me.TableLayoutPanel.RowStyles.Add(New System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20.0!))
         Me.TableLayoutPanel.Size = New System.Drawing.Size(396, 258)
         Me.TableLayoutPanel.TabIndex = 0
+        '
+        'refreshRDef
+        '
+        Me.refreshRDef.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.refreshRDef.Location = New System.Drawing.Point(196, 232)
+        Me.refreshRDef.Name = "refreshRDef"
+        Me.refreshRDef.Size = New System.Drawing.Size(116, 23)
+        Me.refreshRDef.TabIndex = 1
+        Me.refreshRDef.Text = "refresh RDefinitions"
+        Me.refreshRDef.UseVisualStyleBackColor = True
         '
         'AboutBox1
         '
@@ -175,4 +191,5 @@ Partial Class AboutBox1
     Friend WithEvents LabelProductName As System.Windows.Forms.Label
     Friend WithEvents LogoPictureBox As System.Windows.Forms.PictureBox
     Friend WithEvents TableLayoutPanel As System.Windows.Forms.TableLayoutPanel
+    Friend WithEvents refreshRDef As System.Windows.Forms.Button
 End Class

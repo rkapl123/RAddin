@@ -68,12 +68,12 @@ Module RscriptInvocation
                             Else
                                 printedValue = RDataRange(i, j).Value2
                             End If
-                            writtenLine = writtenLine + printedValue + vbTab
-                            j = j + 1
+                            writtenLine += printedValue + vbTab
+                            j += +1
                         Loop Until j > RDataRange.Columns.Count
                         outputFile.WriteLine(Left(writtenLine, Len(writtenLine) - 1))
                     End If
-                    i = i + 1
+                    i += 1
                 Loop Until i > RDataRange.Rows.Count
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
@@ -86,11 +86,11 @@ Module RscriptInvocation
 
     ' creates script files for defined scriptRng ranges 
     Public Function storeScriptRng() As Boolean
-        Dim scriptRngFilename As String = vbNullString, scriptRngdir = vbNullString, scriptText = vbNullString
+        Dim scriptRngFilename As String = vbNullString, scriptText = vbNullString
         Dim RDataRange As Range = Nothing
         Dim outputFile As StreamWriter = Nothing
 
-        scriptRngdir = dirglobal
+        Dim scriptRngdir As String = dirglobal
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             Try
                 Dim ErrMsg As String
@@ -126,12 +126,12 @@ Module RscriptInvocation
                         Dim writtenLine As String = ""
                         If RDataRange(i, 1).Value2 IsNot Nothing Then
                             Do
-                                writtenLine = writtenLine + RDataRange(i, j).Value2
-                                j = j + 1
+                                writtenLine += RDataRange(i, j).Value2
+                                j += 1
                             Loop Until j > RDataRange.Columns.Count
                             outputFile.WriteLine(writtenLine)
                         End If
-                        i = i + 1
+                        i += 1
                     Loop Until i > RDataRange.Rows.Count
                 End If
             Catch ex As Exception
@@ -179,8 +179,8 @@ Module RscriptInvocation
     Public Function getResults() As Boolean
         Dim resFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
-        Dim previousResultRange As Range = Nothing
-        Dim errMsg As String = vbNullString
+        Dim previousResultRange As Range
+        Dim errMsg As String
 
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("results").Length - 1
@@ -246,7 +246,7 @@ Module RscriptInvocation
     Public Function getDiags() As Boolean
         Dim diagFilename As String = vbNullString, readdir As String
         Dim RDataRange As Range = Nothing
-        Dim errMsg As String = vbNullString
+        Dim errMsg As String
 
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("diags").Length - 1
@@ -285,7 +285,7 @@ Module RscriptInvocation
         Dim filename As String = vbNullString
         Dim readdir As String = dirglobal
         Dim RDataRange As Range = Nothing
-        Dim errMsg As String = vbNullString
+        Dim errMsg As String
 
         ' check for script existence before creating any potential missing folders below...
         For c As Integer = 0 To RdefDic("scripts").Length - 1
