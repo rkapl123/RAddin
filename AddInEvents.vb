@@ -5,17 +5,23 @@ Imports Microsoft.Office.Interop.Excel
 Public Class AddInEvents
     Implements IExcelAddIn
 
+    Private WBclosing As Boolean = False
+
     ''' <summary>the Application object for event registration</summary>
     WithEvents Application As Application
 
     ''' <summary>connect to Excel when opening Addin</summary>
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
+        theMenuHandler = New MenuHandler
+        Trace.Listeners.Add(New ExcelDna.Logging.LogDisplayTraceListener())
     End Sub
 
     ''' <summary>clean up when Raddin is deactivated</summary>
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
         If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
+        theMenuHandler = Nothing
+        Application = Nothing
     End Sub
 
     ''' <summary>save arg ranges to text files as well </summary>
@@ -36,6 +42,8 @@ Public Class AddInEvents
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
         RAddin.removeResultsDiags() ' remove results specified by rres
+        If WBclosing Then currWb = Nothing
+        WBclosing = False
     End Sub
 
     ''' <summary>refresh ribbon is being treated in Workbook_Activate...</summary>
@@ -75,6 +83,6 @@ Public Class AddInEvents
 
     ''' <summary>Close Workbook: remove reference to current Workbook</summary>
     Private Sub Application_WorkbookBeforeClose(Wb As Workbook, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeClose
-        currWb = Nothing
+        WBclosing = True
     End Sub
 End Class

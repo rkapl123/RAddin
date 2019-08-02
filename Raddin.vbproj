@@ -118,7 +118,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="RAddinRibbon.vb" />
+    <Compile Include="MenuHandler.vb" />
     <Compile Include="RAddin.vb" />
   </ItemGroup>
   <ItemGroup>

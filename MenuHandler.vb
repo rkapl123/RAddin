@@ -4,7 +4,7 @@ Imports System.Configuration
 
 ''' <summary>Events from Ribbon</summary>
 <ComVisible(True)>
-Public Class RAddinRibbon
+Public Class MenuHandler
     Inherits ExcelRibbon
     ''' <summary></summary>
     Public runShell As Boolean
@@ -101,7 +101,7 @@ Public Class RAddinRibbon
             runShell = CBool(ConfigurationManager.AppSettings("runShell"))
             runRdotNet = CBool(ConfigurationManager.AppSettings("runRdotNet"))
         Catch ex As Exception
-            MsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message)
+            myMsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message, True)
         End Try
     End Sub
 
@@ -116,7 +116,7 @@ Public Class RAddinRibbon
               "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
               "</buttonGroup><toggleButton id='debug' label='debug script' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='3' screentip='toggles whether to debug R script' supertip='toggles whether to debug R script (leave cmd shell open)' />" +
               "" +
-              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox and refresh Rdefinitions from current Workbook'/></dialogBoxLauncher></group>" +
+              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox (refresh Rdefinitions from current Workbook and show Log from there)'/></dialogBoxLauncher></group>" +
               "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
         Dim presetSheetButtonsCount As Integer = Int16.Parse(ConfigurationManager.AppSettings("presetSheetButtonsCount"))
         Dim thesize As String = IIf(presetSheetButtonsCount < 15, "normal", "large")

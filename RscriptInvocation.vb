@@ -4,21 +4,30 @@ Imports Microsoft.Office.Interop.Excel
 
 ''' <summary>all functions for the Rscript invocation method (by writing files and retrieving the results from files after invocation)</summary>
 Module RscriptInvocation
-    ''' <summary></summary>
+    ''' <summary>executable name for calling (not only R) scripts (could also be cmd.exe or perl.exe)</summary>
     Public rexec As String
-    ''' <summary></summary>
+    ''' <summary>optional arguments to executable for calling (not only R) scripts, could be /c for cmd.exe</summary>
     Public rexecArgs As String
 
-    ''' <summary>prepare Parameters (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags </summary>
+    ''' <summary>prepare parameter (script, args, results, diags) for usage in invokeScripts, storeArgs, getResults and getDiags</summary>
+    ''' <param name="index">index of parameter to be prepared in RdefDic</param>
+    ''' <param name="name">name (type) of parameter: script, scriptrng, args, results, diags</param>
+    ''' <param name="RDataRange">returned Range of data area for scriptrng, args, results and diags</param>
+    ''' <param name="returnName">returned name of data file for the parameter: same as range name</param>
+    ''' <param name="returnPath">returned path of data file for the parameter</param>
+    ''' <param name="ext">extension of filename that should be used for file containing data for that type (e.g. txt for args/results or png for diags)</param>
     ''' <returns>True if success, False otherwise</returns>
-    Private Function prepareParams(c As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
-        Dim value As String = RdefDic(name)(c)
+    Private Function prepareParam(index As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
+        Dim value As String = RdefDic(name)(index)
+        If value = "" Then
+            Return "Empty definition value for parameter " + name + ", index: " + index.ToString()
+        End If
         ' only for args, results and diags (scripts dont have a target range)
         If name = "args" Or name = "results" Or name = "diags" Or name = "scriptrng" Then
             Try
                 RDataRange = currWb.Names.Item(value).RefersToRange
             Catch ex As Exception
-                Return "Error occured when looking up " + name + " range '" + value + "' (defined correctly ?), " + ex.Message
+                Return "Error occured when looking up " + name + " range '" + value + "' in Workbook " + currWb.Name + " (defined correctly ?), " + ex.Message
             End Try
         End If
         ' if argvalue refers to a WS Name, cut off WS name prefix for R file name...
@@ -26,8 +35,11 @@ Module RscriptInvocation
         If posWSseparator > 0 Then
             value = value.Substring(posWSseparator)
         End If
-        If Len(RdefDic(name + "paths")(c)) > 0 Then
-            returnPath = RdefDic(name + "paths")(c)
+        ' get path of data file, if it is defined
+        If RdefDic.ContainsKey(name + "paths") Then
+            If Len(RdefDic(name + "paths")(index)) > 0 Then
+                returnPath = RdefDic(name + "paths")(index)
+            End If
         End If
         returnName = value + ext
         Return vbNullString
@@ -46,7 +58,7 @@ Module RscriptInvocation
         For c As Integer = 0 To RdefDic("args").Length - 1
             Try
                 Dim errMsg As String
-                errMsg = prepareParams(c, "args", RDataRange, argFilename, argdir, ".txt")
+                errMsg = prepareParam(c, "args", RDataRange, argFilename, argdir, ".txt")
                 If Len(errMsg) > 0 Then
                     If Not RAddin.myMsgBox(errMsg) Then Return False
                 End If
@@ -91,7 +103,7 @@ Module RscriptInvocation
         Return True
     End Function
 
-    ''' <summary>creates script files for defined scriptRng ranges </summary>
+    ''' <summary>creates script files for defined scriptRng ranges</summary>
     ''' <returns>True if success, False otherwise</returns>
     Public Function storeScriptRng() As Boolean
         Dim scriptRngFilename As String = vbNullString, scriptText = vbNullString
@@ -107,7 +119,7 @@ Module RscriptInvocation
                     scriptText = RdefDic("scriptrng")(c).Substring(1)
                     scriptRngFilename = "RDataRangeRow" + c.ToString() + ".R"
                 Else
-                    ErrMsg = prepareParams(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
+                    ErrMsg = prepareParam(c, "scriptrng", RDataRange, scriptRngFilename, scriptRngdir, ".R")
                     If Len(ErrMsg) > 0 Then
                         If Not RAddin.myMsgBox(ErrMsg) Then Return False
                     End If
@@ -160,7 +172,7 @@ Module RscriptInvocation
 
         scriptpath = dirglobal
         For c As Integer = 0 To RdefDic("scripts").Length - 1
-            Dim ErrMsg As String = prepareParams(c, "scripts", Nothing, script, scriptpath, "")
+            Dim ErrMsg As String = prepareParam(c, "scripts", Nothing, script, scriptpath, "")
             If Len(ErrMsg) > 0 Then
                 If Not RAddin.myMsgBox(ErrMsg) Then Return False
             End If
@@ -195,7 +207,7 @@ Module RscriptInvocation
 
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("results").Length - 1
-            errMsg = prepareParams(c, "results", RDataRange, resFilename, readdir, ".txt")
+            errMsg = prepareParam(c, "results", RDataRange, resFilename, readdir, ".txt")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -262,7 +274,7 @@ Module RscriptInvocation
 
         readdir = dirglobal
         For c As Integer = 0 To RdefDic("diags").Length - 1
-            errMsg = prepareParams(c, "diags", RDataRange, diagFilename, readdir, ".png")
+            errMsg = prepareParam(c, "diags", RDataRange, diagFilename, readdir, ".png")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -304,7 +316,7 @@ Module RscriptInvocation
         For c As Integer = 0 To RdefDic("scripts").Length - 1
             Dim script As String = vbNullString
             ' returns script and readdir !
-            errMsg = prepareParams(c, "scripts", Nothing, script, readdir, "")
+            errMsg = prepareParam(c, "scripts", Nothing, script, readdir, "")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -339,7 +351,7 @@ Module RscriptInvocation
         ' remove input argument files
         For c As Integer = 0 To RdefDic("args").Length - 1
             ' returns filename and readdir !
-            errMsg = prepareParams(c, "args", RDataRange, filename, readdir, ".txt")
+            errMsg = prepareParam(c, "args", RDataRange, filename, readdir, ".txt")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -363,7 +375,7 @@ Module RscriptInvocation
         ' remove result files
         For c As Integer = 0 To RdefDic("results").Length - 1
             ' returns filename and readdir !
-            errMsg = prepareParams(c, "results", RDataRange, filename, readdir, ".txt")
+            errMsg = prepareParam(c, "results", RDataRange, filename, readdir, ".txt")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -390,7 +402,7 @@ Module RscriptInvocation
         ' remove diagram files
         For c As Integer = 0 To RdefDic("diags").Length - 1
             ' returns filename and readdir !
-            errMsg = prepareParams(c, "diags", RDataRange, filename, readdir, ".png")
+            errMsg = prepareParam(c, "diags", RDataRange, filename, readdir, ".png")
             If Len(errMsg) > 0 Then
                 If Not RAddin.myMsgBox(errMsg) Then Return False
             End If
@@ -416,7 +428,7 @@ Module RscriptInvocation
         ' remove temporary R script files
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             ' returns filename and readdir !
-            errMsg = prepareParams(c, "scriptrng", RDataRange, filename, readdir, ".R")
+            errMsg = prepareParam(c, "scriptrng", RDataRange, filename, readdir, ".R")
             If Len(errMsg) > 0 Then
                 filename = "RDataRangeRow" + c.ToString() + ".R"
             End If
