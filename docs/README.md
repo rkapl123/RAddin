@@ -65,7 +65,11 @@ In the 3rd column are the definition paths of the files referred to in arg, res 
 The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab and clicking "refresh Rdefinitions":  
 ![Image of screenshot2](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot2.png)
 
+The mentioned hyperlink to the local help file can be configured in the app config file (Raddin-AddIn<64>-packed.xll.config) with key "LocalHelp".
 When saving the Workbook the input arguments (definition with arg) defined in the currently selected Rdefinition dropdown are stored as well. If nothing is selected, the first Rdefinition of the dropdown is chosen.
+
+The error messages are logged to a diagnostic log provided by ExcelDna, which can be accessed by clicking on "show Log". The log level can be set in the app `system.diagnostics` section of the config file (Raddin-AddIn<64>-packed.xll.config):
+Either you set the switchValue attribute of the source element to prevent any trace messages being generated at all, or you set the initializeData attribute of the added LogDisplay listener to prevent the generated messages to be shown (below the chosen level)  
 
 Issues:
 
@@ -81,7 +85,22 @@ and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the 
 Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
 
 ```XML
+  <system.diagnostics>
+    <sources>
+      <source name="ExcelDna.Integration" switchValue="All">
+        <listeners>
+          <remove name="System.Diagnostics.DefaultTraceListener" />
+          <add name="LogDisplay" type="ExcelDna.Logging.LogDisplayTraceListener,ExcelDna.Integration">
+            <!-- EventTypeFilter takes a SourceLevel as the initializeData: 
+                    Off, Critical, Error, Warning (default), Information, Verbose, All -->
+            <filter type="System.Diagnostics.EventTypeFilter" initializeData="Warning" />
+          </add>
+        </listeners>
+      </source>
+    </sources>
+  </system.diagnostics>
   <appSettings file="O:\SOFTWARE\TRIT\R\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
+    <add key="LocalHelp" value="C:\YourPathToLocalHelp\LocalHelp.htm" />
     <add key="ExePath" value="C:\Program Files\R\R-3.4.0\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
     <add key="rHome" value="C:\Program Files\R\R-3.4.0" /> : rHome for the RdotNet invocation method, to get the R-DLL-Path the rPath<bitness>bit setting below is used 
     <add key="rPath64bit" value="bin\x64" /> : the folder for the 64 bit R-DLLs 
