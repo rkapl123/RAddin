@@ -222,7 +222,11 @@ Module RscriptInvocation
                 Try
                     previousResultRange = currWb.Names.Item("___RaddinResult" + RdefDic("results")(c)).RefersToRange
                     previousResultRange.ClearContents()
-                    previousResultRange.Delete()
+                Catch ex As Exception
+                End Try
+            Else ' if we changed from rresults to results, need to remove hiddent ___RaddinResult name, otherwise results would still be removed when saving
+                Try
+                    currWb.Names.Item("___RaddinResult" + RdefDic("results")(c)).Delete()
                 Catch ex As Exception
                 End Try
             End If
@@ -241,7 +245,7 @@ Module RscriptInvocation
                     .RefreshStyle = XlCellInsertionMode.xlOverwriteCells
                     .SavePassword = False
                     .SaveData = True
-                    .AdjustColumnWidth = True
+                    .AdjustColumnWidth = False
                     .RefreshPeriod = 0
                     .TextFileStartRow = 1
                     .TextFileParseType = XlTextParsingType.xlDelimited
