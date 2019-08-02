@@ -174,6 +174,7 @@ Public Module RAddin
     Public Function getRDefinitions() As String
         resetRDefinitions()
         Try
+            RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
