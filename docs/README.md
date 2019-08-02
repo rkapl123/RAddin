@@ -68,7 +68,7 @@ The definitions are loaded into the Rdefinition dropdown either on opening/activ
 The mentioned hyperlink to the local help file can be configured in the app config file (Raddin-AddIn<64>-packed.xll.config) with key "LocalHelp".
 When saving the Workbook the input arguments (definition with arg) defined in the currently selected Rdefinition dropdown are stored as well. If nothing is selected, the first Rdefinition of the dropdown is chosen.
 
-The error messages are logged to a diagnostic log provided by ExcelDna, which can be accessed by clicking on "show Log". The log level can be set in the app `system.diagnostics` section of the config file (Raddin-AddIn<64>-packed.xll.config):
+The error messages are logged to a diagnostic log provided by ExcelDna, which can be accessed by clicking on "show Log". The log level can be set in the `system.diagnostics` section of the app-config file (Raddin-AddIn<64>-packed.xll.config):
 Either you set the switchValue attribute of the source element to prevent any trace messages being generated at all, or you set the initializeData attribute of the added LogDisplay listener to prevent the generated messages to be shown (below the chosen level)  
 
 Issues:
@@ -108,6 +108,7 @@ Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
     <add key="presetSheetButtonsCount" value="24"/> : the preset maximum Button Count for Sheets (if you expect more sheets with Rdefinitions set it accordingly) 
     <add key="runShell" value="True"/> : the default setting for invocation method shell
     <add key="runRdotNet" value="False"/> : the default setting for invocation method RdotNet 
+  </appSettings>
 ```
 
 For the RdotNet invocation method always keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!
