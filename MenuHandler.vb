@@ -19,7 +19,7 @@ Public Class MenuHandler
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()
         errStr = RAddin.startRprocess(runShell, runRdotNet)
-        If errStr <> "" Then MsgBox(errStr)
+        If errStr <> "" Then myMsgBox(errStr, True)
     End Sub
 
     ''' <summary>reflect the change in the togglebuttons title</summary>

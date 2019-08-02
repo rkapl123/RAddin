@@ -30,12 +30,12 @@ Public Class AddInEvents
         ' avoid resetting Rdefinition when dropdown selected for a specific RDefinition !
         If RAddin.dropDownSelected Then
             errStr = RAddin.getRDefinitions()
-            If errStr <> vbNullString Then MsgBox("Error while getRdefinitions (dropdown selected !) in Workbook_Save: " + errStr)
+            If errStr <> vbNullString Then myMsgBox("Error while getRdefinitions (dropdown selected !) in Workbook_Save: " + errStr, True)
         Else
             errStr = doDefinitions(Wb) ' includes getRDefinitions - for top sorted Rdefinition
             If errStr = "no RNames" Then Exit Sub
             If errStr <> vbNullString Then
-                MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
+                myMsgBox("Error when getting definitions in Workbook_Save: " + errStr, True)
                 Exit Sub
             End If
         End If
@@ -53,12 +53,13 @@ Public Class AddInEvents
     ''' <summary>refresh ribbon with current workbook's Rnames</summary>
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
+        WBclosing = False
         errStr = doDefinitions(Wb)
         RAddin.dropDownSelected = False
         If errStr = "no RNames" Then
             RAddin.resetRDefinitions()
         ElseIf errStr <> vbNullString Then
-            MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
+            myMsgBox("Error when getting definitions in Workbook_Activate: " + errStr, True)
         End If
         RAddin.theRibbon.Invalidate()
     End Sub
