@@ -3,18 +3,18 @@ R Addin provides an easy way to define and run R script interactions started fro
 # Using RAddin
 
 Running an R script is simply done by selecting the desired invocation method ("run via shell" or "run via RdotNet") on the R Addin Ribbon Tab and clicking "run <Rdefinition>" 
-beneath the Sheet-button in the Ribbon group "Run R-Scripts defined in WB/sheets names". Activating the "debug script" toggle button leaves the cmd window open when invocation was done "via shell".
+beneath the Sheet-button in the Ribbon group "Run R-Scripts defined in WB/sheets names". Activating the "debug script" toggle button leaves the cmd window open when invocation was done "via shell" and writes additional trace messages to the log (see below). Also, if "run via RdotNet", the output of the R script is also written to the log.
 Selecting the Rdefinition in the Rdefinition dropdown highlights the specified definition range.
 
-When running r scripts, following is executed:
+When running R scripts, following is executed:
 
 ## run via shell
 
-the input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec, the defined results/diagrams that were written to file are read and placed in Excel.
+the input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec (see settings), the defined results/diagrams that were written to file are read and placed in Excel.
 
 ## run via RdotNet
 
-the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in RPath/rpath), the defined results that were created in the R instance are passed to and placed in Excel (no diagrams yet!).
+the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in rHome/rPath<bitness>, see settings), the defined results that were created in the R instance are passed to and placed in Excel (diagrams are passed via file by now!).
 
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
@@ -46,7 +46,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of an executable script. 
 - arg/arg[rc] (R input objects, txt files): R variable name and path/filename, where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
-- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed from excel before saving and rerunning the r script
+- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed from excel before saving and rerunning the R script
 - diag (R output diagrams, png format): path/filename, where (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either ranges, where a script is stored (scriptrng) or directly as a cell value (text content or formula result) in the 2nd column (scriptcell)
 

@@ -249,4 +249,8 @@ Public Module RAddin
         Next
     End Sub
 
+    Public Sub LogInfo(message As String)
+        If RAddin.debugScript Then Trace.TraceInformation(message)
+    End Sub
+
 End Module

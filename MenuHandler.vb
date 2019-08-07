@@ -51,13 +51,19 @@ Public Class MenuHandler
     Public Sub toggleButton(control As IRibbonControl, pressed As Boolean)
         If control.Id = "shell" Then
             runShell = pressed
+            runRdotNet = Not pressed
         ElseIf control.Id = "rdotnet" Then
             runRdotNet = pressed
+            runShell = Not pressed
         ElseIf control.Id = "debug" Then
             RAddin.debugScript = pressed
+            ' invalidate to reflect the change in the togglebuttons image
+            RAddin.theRibbon.InvalidateControl(control.Id)
+            Exit Sub
         End If
-        ' invalidate to reflect the change in the togglebuttons image
-        RAddin.theRibbon.InvalidateControl(control.Id)
+        ' for shell/rdotnet toggle always invalidate both controls
+        RAddin.theRibbon.InvalidateControl("shell")
+        RAddin.theRibbon.InvalidateControl("rdotnet")
     End Sub
 
     ''' <summary></summary>

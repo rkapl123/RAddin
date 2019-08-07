@@ -79,6 +79,7 @@ Public Class AddInEvents
         ' get the definitions from the current defined range (first name in R_Addin Names)
         errStr = RAddin.getRDefinitions()
         If errStr <> vbNullString Then Return "Error while getRdefinitions in doDefinitions: " + errStr
+        LogInfo("done RDefinitions for workbook " + Wb.Name)
         Return vbNullString
     End Function
 

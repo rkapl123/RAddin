@@ -19,13 +19,14 @@ Module RscriptInvocation
     ''' <returns>True if success, False otherwise</returns>
     Private Function prepareParam(index As Integer, name As String, ByRef RDataRange As Range, ByRef returnName As String, ByRef returnPath As String, ext As String) As String
         Dim value As String = RdefDic(name)(index)
-        If value = "" Then
-            Return "Empty definition value for parameter " + name + ", index: " + index.ToString()
-        End If
+        If value = "" Then Return "Empty definition value for parameter " + name + ", index: " + index.ToString()
+
         ' only for args, results and diags (scripts dont have a target range)
+        Dim RDataRangeAddress As String = ""
         If name = "args" Or name = "results" Or name = "diags" Or name = "scriptrng" Then
             Try
                 RDataRange = currWb.Names.Item(value).RefersToRange
+                RDataRangeAddress = RDataRange.Parent.Name + "!" + RDataRange.Address
             Catch ex As Exception
                 Return "Error occured when looking up " + name + " range '" + value + "' in Workbook " + currWb.Name + " (defined correctly ?), " + ex.Message
             End Try
@@ -42,6 +43,7 @@ Module RscriptInvocation
             End If
         End If
         returnName = value + ext
+        LogInfo("prepared param in index:" + index.ToString() + ",type:" + name + ",returnName:" + returnName + ",returnPath:" + returnPath + IIf(RDataRangeAddress <> "", ",RDataRange: " + RDataRangeAddress, ""))
         Return vbNullString
     End Function
 
@@ -94,6 +96,7 @@ Module RscriptInvocation
                     End If
                     i += 1
                 Loop Until i > RDataRange.Rows.Count
+                LogInfo("stored args to " + curWbPrefix + argdir + "\" + argFilename)
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
                 If Not RAddin.myMsgBox("Error occured when creating inputfile '" + argFilename + "', " + ex.Message + " (maybe defined the wrong cell format for values?)") Then Return False
@@ -154,6 +157,7 @@ Module RscriptInvocation
                         i += 1
                     Loop Until i > RDataRange.Rows.Count
                 End If
+                LogInfo("stored Script to " + curWbPrefix + scriptRngdir + "\" + scriptRngFilename)
             Catch ex As Exception
                 If outputFile IsNot Nothing Then outputFile.Close()
                 If Not RAddin.myMsgBox("Error occured when creating script file '" + scriptRngFilename + "', " + ex.Message) Then Return False
@@ -183,7 +187,9 @@ Module RscriptInvocation
 
             Try ' + """"
                 Directory.SetCurrentDirectory(fullScriptPath)
-                Shell(IIf(RAddin.debugScript, "cmd.exe /c """, "") + RscriptInvocation.rexec + " " + RscriptInvocation.rexecArgs + " """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", ""), AppWinStyle.NormalFocus, True)
+                Dim execStr As String = IIf(RAddin.debugScript, "cmd.exe /c """, "") + RscriptInvocation.rexec + " " + RscriptInvocation.rexecArgs + " """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", "")
+                Shell(execStr, AppWinStyle.NormalFocus, True)
+                LogInfo("executed " + execStr)
             Catch ex As Exception
                 ' reset current dir
                 Directory.SetCurrentDirectory(previousDir)
@@ -262,6 +268,7 @@ Module RscriptInvocation
                     currWb.Names.Add(Name:="___RaddinResult" + RdefDic("results")(c), RefersTo:=newQueryTable.ResultRange, Visible:=False)
                 End If
                 newQueryTable.Delete()
+                LogInfo("inserted results from " + curWbPrefix + readdir + "\" + resFilename)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error in placing results in to Excel: " + ex.Message) Then Return False
             End Try
@@ -298,9 +305,10 @@ Module RscriptInvocation
             ' add new shape from picture
             Try
                 With RDataRange.Worksheet.Shapes.AddPicture(Filename:=curWbPrefix + readdir + "\" + diagFilename,
-                    LinkToFile:=False, SaveWithDocument:=True, Left:=RDataRange.Left, Top:=RDataRange.Top, Width:=-1, Height:=-1)
+                    LinkToFile:=Microsoft.Office.Core.MsoTriState.msoFalse, SaveWithDocument:=Microsoft.Office.Core.MsoTriState.msoTrue, Left:=RDataRange.Left, Top:=RDataRange.Top, Width:=-1, Height:=-1)
                     .Name = diagFilename
                 End With
+                LogInfo("added shape for diagram " + curWbPrefix + readdir + "\" + diagFilename)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when placing the diagram into target range '" + RdefDic("diags")(c) + "', " + ex.Message) Then Return False
             End Try
@@ -347,6 +355,8 @@ Module RscriptInvocation
                     If Not foundExe Then
                         RAddin.myMsgBox("Executable '" + rexec + "' not found!" + vbCrLf)
                         Return False
+                    Else
+                        LogInfo("found rexec " + rexec)
                     End If
                 End If
             End If
@@ -373,6 +383,7 @@ Module RscriptInvocation
             ' remove any existing input files...
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 File.Delete(curWbPrefix + readdir + "\" + filename)
+                LogInfo("deleted input " + curWbPrefix + readdir + "\" + filename)
             End If
         Next
 
@@ -398,37 +409,16 @@ Module RscriptInvocation
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
                     File.Delete(curWbPrefix + readdir + "\" + filename)
+                    LogInfo("deleted result " + curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
                     If Not RAddin.myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
                 End Try
             End If
         Next
-        ' remove diagram files
-        For c As Integer = 0 To RdefDic("diags").Length - 1
-            ' returns filename and readdir !
-            errMsg = prepareParam(c, "diags", RDataRange, filename, readdir, ".png")
-            If Len(errMsg) > 0 Then
-                If Not RAddin.myMsgBox(errMsg) Then Return False
-            End If
-            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
-            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
-            ' special comfort: if containing folder doesn't exist, create it now:
-            If Not Directory.Exists(curWbPrefix + readdir) Then
-                Try
-                    Directory.CreateDirectory(curWbPrefix + readdir)
-                Catch ex As Exception
-                    If Not RAddin.myMsgBox("Error occured when trying to create diagram containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
-                End Try
-            End If
-            ' remove any existing diagram files...
-            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
-                Try
-                    File.Delete(curWbPrefix + readdir + "\" + filename)
-                Catch ex As Exception
-                    If Not RAddin.myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
-                End Try
-            End If
-        Next
+
+        ' diag file removal is also used by RdotnetInvocation
+        If Not removeDiagFiles() Then Return False
+
         ' remove temporary R script files
         For c As Integer = 0 To RdefDic("scriptrng").Length - 1
             ' returns filename and readdir !
@@ -451,6 +441,43 @@ Module RscriptInvocation
             If File.Exists(curWbPrefix + readdir + "\" + filename) Then
                 Try
                     File.Delete(curWbPrefix + readdir + "\" + filename)
+                    LogInfo("deleted temporary rscript " + curWbPrefix + readdir + "\" + filename)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
+                End Try
+            End If
+        Next
+        Return True
+    End Function
+
+    Function removeDiagFiles() As Boolean
+        Dim filename As String = vbNullString
+        Dim readdir As String = dirglobal
+        Dim RDataRange As Range = Nothing
+        Dim errMsg As String
+
+        ' remove diagram files
+        For c As Integer = 0 To RdefDic("diags").Length - 1
+            ' returns filename and readdir !
+            errMsg = prepareParam(c, "diags", RDataRange, filename, readdir, ".png")
+            If Len(errMsg) > 0 Then
+                If Not RAddin.myMsgBox(errMsg) Then Return False
+            End If
+            ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\argdir
+            Dim curWbPrefix As String = IIf(Left(readdir, 2) = "\\" Or Mid(readdir, 2, 2) = ":\", "", currWb.Path + "\")
+            ' special comfort: if containing folder doesn't exist, create it now:
+            If Not Directory.Exists(curWbPrefix + readdir) Then
+                Try
+                    Directory.CreateDirectory(curWbPrefix + readdir)
+                Catch ex As Exception
+                    If Not RAddin.myMsgBox("Error occured when trying to create diagram containing folder '" + curWbPrefix + readdir + "', " + ex.Message) Then Return False
+                End Try
+            End If
+            ' remove any existing diagram files...
+            If File.Exists(curWbPrefix + readdir + "\" + filename) Then
+                Try
+                    File.Delete(curWbPrefix + readdir + "\" + filename)
+                    LogInfo("deleted diagram " + curWbPrefix + readdir + "\" + filename)
                 Catch ex As Exception
                     If Not RAddin.myMsgBox("Error occured when trying to remove '" + curWbPrefix + readdir + "\" + filename + "', " + ex.Message) Then Return False
                 End Try
