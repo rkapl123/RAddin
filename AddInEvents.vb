@@ -5,17 +5,23 @@ Imports Microsoft.Office.Interop.Excel
 Public Class AddInEvents
     Implements IExcelAddIn
 
+    Private WBclosing As Boolean = False
+
     ''' <summary>the Application object for event registration</summary>
     WithEvents Application As Application
 
     ''' <summary>connect to Excel when opening Addin</summary>
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
+        theMenuHandler = New MenuHandler
+        Trace.Listeners.Add(New ExcelDna.Logging.LogDisplayTraceListener())
     End Sub
 
     ''' <summary>clean up when Raddin is deactivated</summary>
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
         If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
+        theMenuHandler = Nothing
+        Application = Nothing
     End Sub
 
     ''' <summary>save arg ranges to text files as well </summary>
@@ -24,18 +30,20 @@ Public Class AddInEvents
         ' avoid resetting Rdefinition when dropdown selected for a specific RDefinition !
         If RAddin.dropDownSelected Then
             errStr = RAddin.getRDefinitions()
-            If errStr <> vbNullString Then MsgBox("Error while getRdefinitions (dropdown selected !) in Workbook_Save: " + errStr)
+            If errStr <> vbNullString Then myMsgBox("Error while getRdefinitions (dropdown selected !) in Workbook_Save: " + errStr, True)
         Else
             errStr = doDefinitions(Wb) ' includes getRDefinitions - for top sorted Rdefinition
             If errStr = "no RNames" Then Exit Sub
             If errStr <> vbNullString Then
-                MsgBox("Error when getting definitions in Workbook_Save: " + errStr)
+                myMsgBox("Error when getting definitions in Workbook_Save: " + errStr, True)
                 Exit Sub
             End If
         End If
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
         RAddin.removeResultsDiags() ' remove results specified by rres
+        If WBclosing Then currWb = Nothing
+        WBclosing = False
     End Sub
 
     ''' <summary>refresh ribbon is being treated in Workbook_Activate...</summary>
@@ -45,12 +53,13 @@ Public Class AddInEvents
     ''' <summary>refresh ribbon with current workbook's Rnames</summary>
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
+        WBclosing = False
         errStr = doDefinitions(Wb)
         RAddin.dropDownSelected = False
         If errStr = "no RNames" Then
             RAddin.resetRDefinitions()
         ElseIf errStr <> vbNullString Then
-            MsgBox("Error when getting definitions in Workbook_Activate: " + errStr)
+            myMsgBox("Error when getting definitions in Workbook_Activate: " + errStr, True)
         End If
         RAddin.theRibbon.Invalidate()
     End Sub
@@ -70,11 +79,12 @@ Public Class AddInEvents
         ' get the definitions from the current defined range (first name in R_Addin Names)
         errStr = RAddin.getRDefinitions()
         If errStr <> vbNullString Then Return "Error while getRdefinitions in doDefinitions: " + errStr
+        LogInfo("done RDefinitions for workbook " + Wb.Name)
         Return vbNullString
     End Function
 
     ''' <summary>Close Workbook: remove reference to current Workbook</summary>
     Private Sub Application_WorkbookBeforeClose(Wb As Workbook, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeClose
-        currWb = Nothing
+        WBclosing = True
     End Sub
 End Class

@@ -1,4 +1,6 @@
-﻿''' <summary>About box: used to provide information about version/buildtime and links for local help and project homepage</summary>
+﻿Imports System.Configuration
+
+''' <summary>About box: used to provide information about version/buildtime and links for local help and project homepage</summary>
 Public NotInheritable Class AboutBox1
 
     ''' <summary>set up Aboutbox</summary>
@@ -13,9 +15,8 @@ Public NotInheritable Class AboutBox1
                 sModuleInfo = FileDateTime(sModule).ToString()
             End If
         Next
-
+        Me.LabelProductName.Text = "R-Addin Help"
         Me.Text = String.Format("About {0}", My.Application.Info.Title)
-        Me.LabelProductName.Text = My.Application.Info.ProductName
         Me.LabelVersion.Text = String.Format("Version {0} Buildtime {1}", My.Application.Info.Version.ToString, sModuleInfo)
         Me.LabelCopyright.Text = My.Application.Info.Copyright
         Me.LabelCompanyName.Text = "Help and Sources on: " + My.Application.Info.CompanyName
@@ -34,6 +35,13 @@ Public NotInheritable Class AboutBox1
         Process.Start(My.Application.Info.CompanyName)
     End Sub
 
+    ''' <summary>Click on Local help: activate hyperlink in browser</summary>
+    ''' <param name="sender"></param>
+    ''' <param name="e"></param>
+    Private Sub LabelProductName_Click(sender As Object, e As EventArgs) Handles LabelProductName.Click
+        Process.Start(ConfigurationManager.AppSettings("LocalHelp"))
+    End Sub
+
     ''' <summary>refresh RDefinitions clicked: refresh all RDefinitions in current workbook</summary>
     ''' <param name="sender"></param>
     ''' <param name="e"></param>
@@ -41,13 +49,18 @@ Public NotInheritable Class AboutBox1
         Dim errStr As String
         errStr = RAddin.startRnamesRefresh()
         If Len(errStr) > 0 Then
-            MsgBox("refresh Error: " & errStr)
+            myMsgBox("refresh Error: " & errStr, True)
         Else
             If UBound(Rcalldefnames) = -1 Then
-                MsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!")
+                myMsgBox("no Rdefinitions found for R_Addin in current Workbook (3 column named range (type/value/path), minimum types: rexec and script)!", True)
             Else
-                MsgBox("refreshed Rnames from current Workbook !")
+                myMsgBox("refreshed Rnames from current Workbook !", True)
             End If
         End If
     End Sub
+
+    Private Sub showLog_Click(sender As Object, e As EventArgs) Handles showLog.Click
+        ExcelDna.Logging.LogDisplay.Show()
+    End Sub
+
 End Class

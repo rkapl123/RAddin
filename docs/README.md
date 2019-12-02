@@ -3,18 +3,18 @@ R Addin provides an easy way to define and run R script interactions started fro
 # Using RAddin
 
 Running an R script is simply done by selecting the desired invocation method ("run via shell" or "run via RdotNet") on the R Addin Ribbon Tab and clicking "run <Rdefinition>" 
-beneath the Sheet-button in the Ribbon group "Run R-Scripts defined in WB/sheets names". Activating the "debug script" toggle button leaves the cmd window open when invocation was done "via shell".
+beneath the Sheet-button in the Ribbon group "Run R-Scripts defined in WB/sheets names". Activating the "debug script" toggle button leaves the cmd window open when invocation was done "via shell" and writes additional trace messages to the log (see below). Also, if "run via RdotNet", the output of the R script is also written to the log.
 Selecting the Rdefinition in the Rdefinition dropdown highlights the specified definition range.
 
-When running r scripts, following is executed:
+When running R scripts, following is executed:
 
 ## run via shell
 
-the input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec, the defined results/diagrams that were written to file are read and placed in Excel.
+the input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec (see settings), the defined results/diagrams that were written to file are read and placed in Excel.
 
 ## run via RdotNet
 
-the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in RPath/rpath), the defined results that were created in the R instance are passed to and placed in Excel (no diagrams yet!).
+the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in rHome/rPath<bitness>, see settings), the defined results that were created in the R instance are passed to and placed in Excel (diagrams are passed via file by now!).
 
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
@@ -46,7 +46,7 @@ In the 1st column of the Rdefinition range are the definition types, possible ty
 - dir: the path where below files (scripts, args, results and diagrams) are stored. 
 - script: full path of an executable script. 
 - arg/arg[rc] (R input objects, txt files): R variable name and path/filename, where the (input) arguments are stored. For Rdotnet creation of the dataframe, if the definition type ends with "r", "c" or both, the input argument is assumed to contain (c)olumn names, (r)ow names or both.
-- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed from excel before saving and rerunning the r script
+- res/rres (R output objects, txt files): R variable name and path/filename, where the (output) results are expected. If the definition type is rres, results are removed from excel before saving and rerunning the R script
 - diag (R output diagrams, png format): path/filename, where (output) diagrams are expected.
 - scriptrng/scriptcell (R scripts directly within Excel): either ranges, where a script is stored (scriptrng) or directly as a cell value (text content or formula result) in the 2nd column (scriptcell)
 
@@ -65,7 +65,11 @@ In the 3rd column are the definition paths of the files referred to in arg, res 
 The definitions are loaded into the Rdefinition dropdown either on opening/activating a Workbook with above named areas or by pressing the small dialogBoxLauncher "refresh Rdefinitions" on the R Addin Ribbon Tab and clicking "refresh Rdefinitions":  
 ![Image of screenshot2](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot2.png)
 
+The mentioned hyperlink to the local help file can be configured in the app config file (Raddin-AddIn<64>-packed.xll.config) with key "LocalHelp".
 When saving the Workbook the input arguments (definition with arg) defined in the currently selected Rdefinition dropdown are stored as well. If nothing is selected, the first Rdefinition of the dropdown is chosen.
+
+The error messages are logged to a diagnostic log provided by ExcelDna, which can be accessed by clicking on "show Log". The log level can be set in the `system.diagnostics` section of the app-config file (Raddin-AddIn<64>-packed.xll.config):
+Either you set the switchValue attribute of the source element to prevent any trace messages being generated at all, or you set the initializeData attribute of the added LogDisplay listener to prevent the generated messages to be shown (below the chosen level)  
 
 Issues:
 
@@ -81,7 +85,22 @@ and run AddIns("Raddin-AddIn-packed.xll").Installed = True in Excel (or add the 
 Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
 
 ```XML
+  <system.diagnostics>
+    <sources>
+      <source name="ExcelDna.Integration" switchValue="All">
+        <listeners>
+          <remove name="System.Diagnostics.DefaultTraceListener" />
+          <add name="LogDisplay" type="ExcelDna.Logging.LogDisplayTraceListener,ExcelDna.Integration">
+            <!-- EventTypeFilter takes a SourceLevel as the initializeData: 
+                    Off, Critical, Error, Warning (default), Information, Verbose, All -->
+            <filter type="System.Diagnostics.EventTypeFilter" initializeData="Warning" />
+          </add>
+        </listeners>
+      </source>
+    </sources>
+  </system.diagnostics>
   <appSettings file="O:\SOFTWARE\TRIT\R\RAddinSettings.config"> : This is a redirection to a central config file containing the same information below
+    <add key="LocalHelp" value="C:\YourPathToLocalHelp\LocalHelp.htm" />
     <add key="ExePath" value="C:\Program Files\R\R-3.4.0\bin\x64\Rscript.exe" /> : The Executable Path used by the shell invocation method
     <add key="rHome" value="C:\Program Files\R\R-3.4.0" /> : rHome for the RdotNet invocation method, to get the R-DLL-Path the rPath<bitness>bit setting below is used 
     <add key="rPath64bit" value="bin\x64" /> : the folder for the 64 bit R-DLLs 
@@ -89,6 +108,7 @@ Adapt the settings in Raddin-AddIn<64>-packed.xll.config:
     <add key="presetSheetButtonsCount" value="24"/> : the preset maximum Button Count for Sheets (if you expect more sheets with Rdefinitions set it accordingly) 
     <add key="runShell" value="True"/> : the default setting for invocation method shell
     <add key="runRdotNet" value="False"/> : the default setting for invocation method RdotNet 
+  </appSettings>
 ```
 
 For the RdotNet invocation method always keep in mind that a 32 bit Excel instance can only work with 32 bit R-DLLs and a 64 bit Excel instance can only work with 64 bit R-DLLs !!!

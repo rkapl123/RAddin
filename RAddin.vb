@@ -16,8 +16,10 @@ Public Module RAddin
     Public rdefsheetColl As Dictionary(Of String, Dictionary(Of String, Range))
     ''' <summary></summary>
     Public rdefsheetMap As Dictionary(Of String, String)
-    ''' <summary></summary>
+    ''' <summary>reference object for the Addins ribbon</summary>
     Public theRibbon As ExcelDna.Integration.CustomUI.IRibbonUI
+    ''' <summary>ribbon menu handler</summary>
+    Public theMenuHandler As MenuHandler
     ''' <summary></summary>
     Public avoidFurtherMsgBoxes As Boolean
     ''' <summary></summary>
@@ -70,11 +72,20 @@ Public Module RAddin
     ''' <summary>Msgbox that avoids further Msgboxes (click Yes) or cancels run altogether (click Cancel)</summary>
     ''' <param name="message"></param>
     ''' <returns>True if further Msgboxes should be avoided, False otherwise</returns>
-    Public Function myMsgBox(message As String) As Boolean
-        If avoidFurtherMsgBoxes Then Return True
-        Dim retval As MsgBoxResult = MsgBox(message + vbCrLf + "Avoid further Messages (Yes/No) or abort Rdefinition (Cancel)", MsgBoxStyle.YesNoCancel)
-        If retval = MsgBoxResult.Yes Then avoidFurtherMsgBoxes = True
-        Return (retval = MsgBoxResult.Yes Or retval = MsgBoxResult.No)
+    Public Function myMsgBox(message As String, Optional noAvoidChoice As Boolean = False) As Boolean
+        Dim theMethod As Object = (New System.Diagnostics.StackTrace).GetFrame(1).GetMethod
+        Dim caller As String = theMethod.ReflectedType.FullName & "." & theMethod.Name
+
+        Trace.TraceWarning("{0}: {1}", caller, message)
+        If noAvoidChoice Then
+            MsgBox(message, MsgBoxStyle.OkOnly, "R-Addin Message")
+            Return False
+        Else
+            If avoidFurtherMsgBoxes Then Return True
+            Dim retval As MsgBoxResult = MsgBox(message + vbCrLf + "Avoid further Messages (Yes/No) or abort Rdefinition (Cancel)", MsgBoxStyle.YesNoCancel, "R-Addin Message")
+            If retval = MsgBoxResult.Yes Then avoidFurtherMsgBoxes = True
+            Return (retval = MsgBoxResult.Yes Or retval = MsgBoxResult.No)
+        End If
     End Function
 
     ''' <summary>refresh Rnames from Workbook on demand (currently when invoking about box)</summary>
@@ -163,6 +174,7 @@ Public Module RAddin
     Public Function getRDefinitions() As String
         resetRDefinitions()
         Try
+            RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
             For Each defRow As Range In Rdefinitions.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
@@ -235,6 +247,10 @@ Public Module RAddin
                 namedrange.Delete()
             End If
         Next
+    End Sub
+
+    Public Sub LogInfo(message As String)
+        If RAddin.debugScript Then Trace.TraceInformation(message)
     End Sub
 
 End Module

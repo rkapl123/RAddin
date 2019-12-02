@@ -4,7 +4,7 @@ Imports System.Configuration
 
 ''' <summary>Events from Ribbon</summary>
 <ComVisible(True)>
-Public Class RAddinRibbon
+Public Class MenuHandler
     Inherits ExcelRibbon
     ''' <summary></summary>
     Public runShell As Boolean
@@ -19,7 +19,7 @@ Public Class RAddinRibbon
         RAddin.Rdefinitions.Parent.Select()
         RAddin.Rdefinitions.Select()
         errStr = RAddin.startRprocess(runShell, runRdotNet)
-        If errStr <> "" Then MsgBox(errStr)
+        If errStr <> "" Then myMsgBox(errStr, True)
     End Sub
 
     ''' <summary>reflect the change in the togglebuttons title</summary>
@@ -51,13 +51,19 @@ Public Class RAddinRibbon
     Public Sub toggleButton(control As IRibbonControl, pressed As Boolean)
         If control.Id = "shell" Then
             runShell = pressed
+            runRdotNet = Not pressed
         ElseIf control.Id = "rdotnet" Then
             runRdotNet = pressed
+            runShell = Not pressed
         ElseIf control.Id = "debug" Then
             RAddin.debugScript = pressed
+            ' invalidate to reflect the change in the togglebuttons image
+            RAddin.theRibbon.InvalidateControl(control.Id)
+            Exit Sub
         End If
-        ' invalidate to reflect the change in the togglebuttons image
-        RAddin.theRibbon.InvalidateControl(control.Id)
+        ' for shell/rdotnet toggle always invalidate both controls
+        RAddin.theRibbon.InvalidateControl("shell")
+        RAddin.theRibbon.InvalidateControl("rdotnet")
     End Sub
 
     ''' <summary></summary>
@@ -101,7 +107,7 @@ Public Class RAddinRibbon
             runShell = CBool(ConfigurationManager.AppSettings("runShell"))
             runRdotNet = CBool(ConfigurationManager.AppSettings("runRdotNet"))
         Catch ex As Exception
-            MsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message)
+            myMsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message, True)
         End Try
     End Sub
 
@@ -116,7 +122,7 @@ Public Class RAddinRibbon
               "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
               "</buttonGroup><toggleButton id='debug' label='debug script' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='3' screentip='toggles whether to debug R script' supertip='toggles whether to debug R script (leave cmd shell open)' />" +
               "" +
-              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox and refresh Rdefinitions from current Workbook'/></dialogBoxLauncher></group>" +
+              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox (refresh Rdefinitions from current Workbook and show Log from there)'/></dialogBoxLauncher></group>" +
               "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
         Dim presetSheetButtonsCount As Integer = Int16.Parse(ConfigurationManager.AppSettings("presetSheetButtonsCount"))
         Dim thesize As String = IIf(presetSheetButtonsCount < 15, "normal", "large")

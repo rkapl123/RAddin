@@ -1,6 +1,8 @@
 ﻿Imports RDotNet
 Imports RDotNet.NativeLibrary
 Imports Microsoft.Office.Interop.Excel
+Imports RDotNet.Devices
+Imports RDotNet.Internals
 
 ''' <summary>all functions for the Rdotnet invocation method (here the scripts and input args are passed to an inmemory engine and results are retrieved from there with one exception: graphics are still taken from the filesystem)</summary>
 Module RdotnetInvocation
@@ -10,20 +12,36 @@ Module RdotnetInvocation
     Public rPath As String
     ''' <summary></summary>
     Public rHome As String
+    ''' <summary>the "console" used to capture output from R.NET engine, actually writing to Trace</summary>
+    Public debugConsole As DebugDevice
 
     '''<summary>initialize RdotNet engine</summary> 
     ''' <returns>True if success, False otherwise</returns>
     Public Function initializeRDotNet() As Boolean
         ' only instantiate new engine if there is none already (reuse engine !)
         If IsNothing(rDotNetEngine) Then
+            Dim logOutput As String = ""
             Try
                 REngine.SetEnvironmentVariables(rPath:=rPath, rHome:=rHome)
-                rDotNetEngine = REngine.GetInstance()
-                rDotNetEngine.Initialize()
+                logOutput = (New NativeUtility(Nothing)).FindRPaths(rPath, rHome)
+                Dim sp As RDotNet.StartupParameter = New StartupParameter With {
+                    .Quiet = False,
+                    .Interactive = False
+                }
+                debugConsole = New DebugDevice()
+                rDotNetEngine = REngine.GetInstance(device:=debugConsole, parameter:=sp, initialize:=True)
+                If Not rDotNetEngine.IsRunning Then rDotNetEngine.Initialize(device:=debugConsole, parameter:=sp, setupMainLoop:=True)
+                ' avoid autoprint as this kills performance
+                rDotNetEngine.AutoPrint = False
+                ' set starting directory to current workbooks path
+                rDotNetEngine.Evaluate("setwd(""" + Replace(currWb.Path, "\", "/") + """)")
+                LogInfo("initialized RDotNet, FindRPaths Log: " + logOutput)
             Catch ex As Exception
-                If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",FindRPaths Log: " + (New NativeUtility(Nothing)).FindRPaths(rPath, rHome)) Then Return False
+                If Not RAddin.myMsgBox("Error initializing RDotNet: " + ex.Message + ",FindRPaths Log: " + logOutput) Then Return False
             End Try
         End If
+        ' remove diagramfiles, in case folder structure is not existing, create it...
+        If Not removeDiagFiles() Then Return False
         Return True
     End Function
 
@@ -69,6 +87,7 @@ Module RdotnetInvocation
                 Dim targetArg As RDotNet.DataFrame = rDotNetEngine.CreateDataFrame(dfDataColumns, columnNames:=IIf(InStr(rowcolumn, "c"), columnNames, Nothing), rowNames:=IIf(InStr(rowcolumn, "r"), rowNames, Nothing))
                 ' set the symbol to the correct name
                 rDotNetEngine.SetSymbol(argname, targetArg)
+                LogInfo("set symbol to name, argname:" + argname)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when creating RdotNet arg '" + argname + "', " + ex.Message) Then Return False
             End Try
@@ -96,6 +115,7 @@ Module RdotnetInvocation
             If Not IsNothing(scriptText) Then
                 Try
                     rDotNetEngine.Evaluate(scriptText)
+                    LogInfo("Evaluated scriptText: " + scriptText)
                 Catch ex As Exception
                     If Not RAddin.myMsgBox("Error occured when evaluating script '" + scriptText + "', " + ex.Message) Then Return False
                 End Try
@@ -103,17 +123,16 @@ Module RdotnetInvocation
                 Dim i As Integer = 1
                 Do
                     Dim j As Integer = 1
-                    Dim evalLine As String = ""
                     If RDataRange(i, 1).Value2 IsNot Nothing Then
                         Do
-                            Try
-                                evalLine = RDataRange(i, j).Value2
-                                rDotNetEngine.Evaluate(evalLine)
-                            Catch ex As Exception
-                                If Not RAddin.myMsgBox("Error occured when evaluating script line '" + evalLine + "', " + ex.Message) Then Return False
-                            End Try
+                            scriptText += RDataRange(i, j).Value2 + vbCrLf
                             j += 1
                         Loop Until j > RDataRange.Columns.Count
+                        Try
+                            rDotNetEngine.Evaluate(scriptText)
+                        Catch ex As Exception
+                            If Not RAddin.myMsgBox("Error occured when evaluating script '" + scriptText + "', " + ex.Message) Then Return False
+                        End Try
                     End If
                     i += 1
                 Loop Until i > RDataRange.Rows.Count
@@ -134,6 +153,7 @@ Module RdotnetInvocation
             Dim scriptname As String = RdefDic("scripts")(c)
             Try
                 rDotNetEngine.Evaluate("source('" + curWbPrefix + scriptpath + "\" + scriptname + "')")
+                LogInfo("Evaluated script in: " + +curWbPrefix + scriptpath + "\" + scriptname)
             Catch ex As Exception
                 If Not RAddin.myMsgBox("Error occured when evaluating script '" + curWbPrefix + scriptpath + "\" + scriptname + "', " + ex.Message) Then Return False
             End Try
@@ -224,6 +244,7 @@ Module RdotnetInvocation
                 End If
                 i += 1
             Loop Until i > rowCount - 1
+            LogInfo("Put results in resname:" + resname)
         Next
         Return True
     End Function
@@ -236,3 +257,68 @@ Module RdotnetInvocation
     End Function
 
 End Module
+
+Public Class DebugDevice
+    Implements RDotNet.Devices.ICharacterDevice
+    Private Sub WriteConsole(output As String, length As Integer, outputType As ConsoleOutputType) Implements ICharacterDevice.WriteConsole
+        If RAddin.debugScript Then Trace.WriteLine("R.NET: " + output)
+    End Sub
+
+    Public Sub ShowMessage(message As String) Implements ICharacterDevice.ShowMessage
+        If RAddin.debugScript Then Trace.WriteLine("R.NET: " + message)
+    End Sub
+
+    Public Sub Busy(which As BusyType) Implements ICharacterDevice.Busy
+    End Sub
+
+    Public Sub Callback() Implements ICharacterDevice.Callback
+    End Sub
+
+    Public Sub Suicide(message As String) Implements ICharacterDevice.Suicide
+        Trace.WriteLine("R.NET(Suicide): " + message)
+    End Sub
+
+    Public Sub ResetConsole() Implements ICharacterDevice.ResetConsole
+    End Sub
+
+    Public Sub FlushConsole() Implements ICharacterDevice.FlushConsole
+    End Sub
+
+    Public Sub ClearErrorConsole() Implements ICharacterDevice.ClearErrorConsole
+    End Sub
+
+    Public Sub CleanUp(saveAction As StartupSaveAction, status As Integer, runLast As Boolean) Implements ICharacterDevice.CleanUp
+    End Sub
+
+    Public Sub EditFile(file As String) Implements ICharacterDevice.EditFile
+    End Sub
+
+    Public Function ReadConsole(prompt As String, capacity As Integer, history As Boolean) As String Implements ICharacterDevice.ReadConsole
+        Return Nothing
+    End Function
+
+    Public Function Ask(question As String) As YesNoCancel Implements ICharacterDevice.Ask
+        Return YesNoCancel.No
+    End Function
+
+    Public Function ShowFiles(files() As String, headers() As String, title As String, delete As Boolean, pager As String) As Boolean Implements ICharacterDevice.ShowFiles
+        Return False
+    End Function
+
+    Public Function ChooseFile(create As Boolean) As String Implements ICharacterDevice.ChooseFile
+        Return Nothing
+    End Function
+
+    Public Function LoadHistory([call] As Language, operation As SymbolicExpression, args As Pairlist, environment As REnvironment) As SymbolicExpression Implements ICharacterDevice.LoadHistory
+        Return environment.Engine.NilValue
+    End Function
+
+    Public Function SaveHistory([call] As Language, operation As SymbolicExpression, args As Pairlist, environment As REnvironment) As SymbolicExpression Implements ICharacterDevice.SaveHistory
+        Return environment.Engine.NilValue
+    End Function
+
+    Public Function AddHistory([call] As Language, operation As SymbolicExpression, args As Pairlist, environment As REnvironment) As SymbolicExpression Implements ICharacterDevice.AddHistory
+        Return environment.Engine.NilValue
+    End Function
+
+End Class
