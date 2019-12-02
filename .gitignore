@@ -1,0 +1,21 @@
+
+###############
+#    folder   #
+###############
+/**/DROP/
+/**/TEMP/
+/**/packages/
+/**/bin/
+/**/obj/
+_site
+/test/testDir/testdiagram.png
+/test/testDir/test_in.txt
+/test/testDir/test_out.txt
+/test/testdiagram.png
+/test/RDataRangeRow0.R
+/test/scriptRange.R
+/test/test_in.txt
+/test/test_out.txt
+.vs
+api
+articles
