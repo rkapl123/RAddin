@@ -7,7 +7,7 @@ Public Module RAddin
     ''' <summary></summary>
     Public currWb As Workbook
     ''' <summary></summary>
-    Public Rdefinitions As Range
+    Public RdefinitionRange As Range
     ''' <summary></summary>
     Public Rcalldefnames As String() = {}
     ''' <summary></summary>
@@ -94,7 +94,7 @@ Public Module RAddin
         Dim errStr As String
         If currWb Is Nothing Then Return "No Workbook active to refresh RNames from..."
         ' always reset Rdefinitions when changing Workbooks, otherwise this is not being refilled in getRNames
-        Rdefinitions = Nothing
+        RdefinitionRange = Nothing
         ' get the defined R_Addin Names
         errStr = getRNames()
         If errStr = "no definitions" Then
@@ -124,7 +124,7 @@ Public Module RAddin
                 Dim nodeName As String = Replace(Replace(namedrange.Name, "R_Addin", ""), namedrange.Parent.Name & "!", "")
                 If nodeName = "" Then nodeName = "MainScript"
                 ' first definition as standard definition (works without selecting a Rdefinition)
-                If Rdefinitions Is Nothing Then Rdefinitions = namedrange.RefersToRange
+                If RdefinitionRange Is Nothing Then RdefinitionRange = namedrange.RefersToRange
                 If Not InStr(namedrange.Name, "!") > 0 Then
                     finalname = currWb.Name + finalname
                 End If
@@ -175,7 +175,7 @@ Public Module RAddin
         resetRDefinitions()
         Try
             RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
-            For Each defRow As Range In Rdefinitions.Rows
+            For Each defRow As Range In RdefinitionRange.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
                 defval = defRow.Cells(1, 2).Value2
@@ -232,7 +232,7 @@ Public Module RAddin
                 Return "Error in getRDefinitions: " + ex.Message
             End Try
             If rexec Is Nothing And rPath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath (for Rdotnet) defined"
-            If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + Rdefinitions.Name.Name
+            If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + RdefinitionRange.Name.Name
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message
         End Try

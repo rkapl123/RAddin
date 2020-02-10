@@ -5,8 +5,6 @@ Imports Microsoft.Office.Interop.Excel
 Public Class AddInEvents
     Implements IExcelAddIn
 
-    Private WBclosing As Boolean = False
-
     ''' <summary>the Application object for event registration</summary>
     WithEvents Application As Application
 
@@ -42,8 +40,6 @@ Public Class AddInEvents
         RAddin.avoidFurtherMsgBoxes = False
         RscriptInvocation.storeArgs()
         RAddin.removeResultsDiags() ' remove results specified by rres
-        If WBclosing Then currWb = Nothing
-        WBclosing = False
     End Sub
 
     ''' <summary>refresh ribbon is being treated in Workbook_Activate...</summary>
@@ -53,7 +49,6 @@ Public Class AddInEvents
     ''' <summary>refresh ribbon with current workbook's Rnames</summary>
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
         Dim errStr As String
-        WBclosing = False
         errStr = doDefinitions(Wb)
         RAddin.dropDownSelected = False
         If errStr = "no RNames" Then
@@ -69,7 +64,7 @@ Public Class AddInEvents
         Dim errStr As String
         currWb = Wb
         ' always reset Rdefinitions when changing Workbooks (may not be the current one, if saved programmatically!), otherwise this is not being refilled in getRNames
-        Rdefinitions = Nothing
+        RdefinitionRange = Nothing
         ' get the defined R_Addin Names
         errStr = RAddin.getRNames()
         If errStr = "no RNames" Then Return errStr
@@ -83,8 +78,15 @@ Public Class AddInEvents
         Return vbNullString
     End Function
 
-    ''' <summary>Close Workbook: remove reference to current Workbook</summary>
-    Private Sub Application_WorkbookBeforeClose(Wb As Workbook, ByRef Cancel As Boolean) Handles Application.WorkbookBeforeClose
-        WBclosing = True
+    ''' <summary>Close Workbook: remove references to current Workbook and R Definitions</summary>
+    Private Sub Application_WorkbookDeactivate(Wb As Workbook) Handles Application.WorkbookDeactivate
+        currWb = Nothing
+        RAddin.dropDownSelected = False
+        ReDim Preserve Rcalldefnames(-1)
+        ReDim Preserve Rcalldefs(-1)
+        rdefsheetColl = New Dictionary(Of String, Dictionary(Of String, Range))
+        rdefsheetMap = New Dictionary(Of String, String)
+        RAddin.resetRDefinitions()
+        RAddin.theRibbon.Invalidate()
     End Sub
 End Class

@@ -15,9 +15,9 @@ Public Class MenuHandler
     Public Sub startRprocess(control As IRibbonControl)
         Dim errStr As String
         ' set Rdefinition to invocaters range... invocating sheet is put into Tag
-        RAddin.Rdefinitions = RAddin.rdefsheetColl(control.Tag).Item(control.Id)
-        RAddin.Rdefinitions.Parent.Select()
-        RAddin.Rdefinitions.Select()
+        RAddin.RdefinitionRange = RAddin.rdefsheetColl(control.Tag).Item(control.Id)
+        RAddin.RdefinitionRange.Parent.Select()
+        RAddin.RdefinitionRange.Select()
         errStr = RAddin.startRprocess(runShell, runRdotNet)
         If errStr <> "" Then myMsgBox(errStr, True)
     End Sub
@@ -94,9 +94,9 @@ Public Class MenuHandler
     Public Sub selectItem(control As IRibbonControl, id As String, index As Integer)
         ' needed for workbook save (saves selected Rdefinition)
         RAddin.dropDownSelected = True
-        RAddin.Rdefinitions = Rcalldefs(index)
-        RAddin.Rdefinitions.Parent.Select()
-        RAddin.Rdefinitions.Select()
+        RAddin.RdefinitionRange = Rcalldefs(index)
+        RAddin.RdefinitionRange.Parent.Select()
+        RAddin.RdefinitionRange.Select()
     End Sub
 
     ''' <summary></summary>

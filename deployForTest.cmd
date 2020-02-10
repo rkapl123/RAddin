@@ -3,10 +3,15 @@ set source=bin\Debug
 If "%answr%"=="r" (
 set source=bin\Release
 )
-copy /Y %source%\Raddin-AddIn-packed.xll "%appdata%\Microsoft\AddIns"
-copy /Y %source%\Raddin.pdb "%appdata%\Microsoft\AddIns"
-copy /Y %source%\Raddin.dll.config "%appdata%\Microsoft\AddIns\Raddin-AddIn-packed.xll.config"
-copy /Y bin\Release\Raddin-AddIn-packed.xll .
-copy /Y bin\Release\Raddin.dll.config .\Raddin-AddIn-packed.xll.config
+if exist "C:\Program Files\Microsoft Office\root\" (
+	echo 64bit office
+	copy /Y %source%\Raddin-AddIn64-packed.xll "%appdata%\Microsoft\AddIns\Raddin.xll"
+	copy /Y %source%\Raddin.pdb "%appdata%\Microsoft\AddIns"
+	copy /Y %source%\Raddin.dll.config "%appdata%\Microsoft\AddIns\Raddin.xll.config"
+) else (
+	echo 32bit office
+	copy /Y %source%\Raddin-AddIn-packed.xll "%appdata%\Microsoft\AddIns\Raddin.xll"
+	copy /Y %source%\Raddin.pdb "%appdata%\Microsoft\AddIns"
+	copy /Y %source%\Raddin.dll.config "%appdata%\Microsoft\AddIns\Raddin.xll.config"
+)
 pause
-

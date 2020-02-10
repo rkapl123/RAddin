@@ -11,7 +11,7 @@ Public NotInheritable Class AboutBox1
         Dim sModuleInfo As String = vbNullString
         For Each tModule As ProcessModule In Process.GetCurrentProcess().Modules
             Dim sModule As String = tModule.FileName
-            If sModule.ToUpper.Contains("RADDIN-ADDIN-PACKED.XLL") Or sModule.ToUpper.Contains("RADDIN-ADDIN64-PACKED.XLL") Then
+            If sModule.ToUpper.Contains("RADDIN.XLL") Then
                 sModuleInfo = FileDateTime(sModule).ToString()
             End If
         Next
