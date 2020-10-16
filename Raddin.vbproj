@@ -24,7 +24,8 @@
     <DefineDebug>true</DefineDebug>
     <DefineTrace>true</DefineTrace>
     <OutputPath>bin\Debug\</OutputPath>
-    <DocumentationFile>Raddin.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -34,7 +35,8 @@
     <DefineTrace>true</DefineTrace>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>Raddin.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
     <DebugSymbols>true</DebugSymbols>
     <Prefer32Bit>false</Prefer32Bit>
@@ -122,8 +124,6 @@
     <Compile Include="RAddin.vb" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".gitignore" />
-    <None Include="api\.gitignore" />
     <None Include="api\index.md" />
     <None Include="articles\intro.md" />
     <None Include="articles\toc.md" />
@@ -184,9 +184,9 @@
       <ErrorText>Dieses Projekt verweist auf mindestens ein NuGet-Paket, das auf diesem Computer fehlt. Verwenden Sie die Wiederherstellung von NuGet-Paketen, um die fehlenden Dateien herunterzuladen. Weitere Informationen finden Sie unter "http://go.microsoft.com/fwlink/?LinkID=322105". Die fehlende Datei ist "{0}".</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\ExcelDna.AddIn.1.0.0\build\ExcelDna.AddIn.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\ExcelDna.AddIn.1.0.0\build\ExcelDna.AddIn.targets'))" />
-    <Error Condition="!Exists('packages\docfx.console.2.48.1\build\docfx.console.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\docfx.console.2.48.1\build\docfx.console.targets'))" />
+    <Error Condition="!Exists('packages\docfx.console.2.56.3\build\docfx.console.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\docfx.console.2.56.3\build\docfx.console.targets'))" />
   </Target>
-  <Import Project="packages\docfx.console.2.48.1\build\docfx.console.targets" Condition="Exists('packages\docfx.console.2.48.1\build\docfx.console.targets')" />
+  <Import Project="packages\docfx.console.2.56.3\build\docfx.console.targets" Condition="Exists('packages\docfx.console.2.56.3\build\docfx.console.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
