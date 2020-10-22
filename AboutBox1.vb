@@ -16,8 +16,12 @@ Public NotInheritable Class AboutBox1
             End If
         Next
         Me.LabelProductName.Text = "R-Addin Help"
+        Dim runRdotNetSupport As String = ""
+#If Not RdotNet Then
+        runRdotNetSupport = " (without RdotNet support)"
+#End If
         Me.Text = String.Format("About {0}", My.Application.Info.Title)
-        Me.LabelVersion.Text = String.Format("Version {0} Buildtime {1}", My.Application.Info.Version.ToString, sModuleInfo)
+        Me.LabelVersion.Text = String.Format("Version {0}:{1}", My.Application.Info.Version.ToString + runRdotNetSupport, sModuleInfo)
         Me.LabelCopyright.Text = My.Application.Info.Copyright
         Me.LabelCompanyName.Text = "Help and Sources on: " + My.Application.Info.CompanyName
         Me.TextBoxDescription.Text = My.Application.Info.Description

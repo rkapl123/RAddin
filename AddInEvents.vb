@@ -27,7 +27,9 @@ Public Class AddInEvents
 
     ''' <summary>clean up when Raddin is deactivated</summary>
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
+#If RdotNet Then
         If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
+#End If
         theMenuHandler = Nothing
         Application = Nothing
     End Sub
