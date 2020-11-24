@@ -53,6 +53,7 @@ Public Module RAddin
                 Return "Exception in Shell Rdefinitions run: " + ex.Message + ex.StackTrace
             End Try
         End If
+#If RdotNet Then
         If runRdotNet Then ' RDotNet invocation
             Try
                 If Not RdotnetInvocation.initializeRDotNet() Then Return vbNullString
@@ -65,6 +66,7 @@ Public Module RAddin
                 Return "Exception in RdotNet Rdefinitions run: " + ex.Message + ex.StackTrace
             End Try
         End If
+#End If
         ' all is OK = return nullstring
         Return vbNullString
     End Function
@@ -166,7 +168,10 @@ Public Module RAddin
         RdefDic("scriptspaths") = {}
         RdefDic("scriptrng") = {}
         RdefDic("scriptrngpaths") = {}
-        rPath = Nothing : rexec = Nothing : dirglobal = vbNullString
+#If RdotNet Then
+        RdotnetInvocation.rPath = Nothing
+#End If
+        rexec = Nothing : dirglobal = vbNullString
     End Sub
 
     ''' <summary>gets definitions from current selected R script invocation range (Rdefinitions)</summary>
@@ -184,7 +189,9 @@ Public Module RAddin
                     RscriptInvocation.rexec = defval
                     RscriptInvocation.rexecArgs = deffilepath
                 ElseIf deftype = "rpath" Then ' setting for RdotNet
+#If RdotNet Then
                     RdotnetInvocation.rPath = defval
+#End If
                 ElseIf deftype = "arg" Or deftype = "argr" Or deftype = "argc" Or deftype = "argrc" Or deftype = "argcr" Then
                     ReDim Preserve RdefDic("argsrc")(RdefDic("argsrc").Length)
                     RdefDic("argsrc")(RdefDic("argsrc").Length - 1) = Replace(deftype, "arg", "")
@@ -224,6 +231,7 @@ Public Module RAddin
             Catch ex As Exception
                 Return "Error in getRDefinitions: " + ex.Message
             End Try
+#If RdotNet Then
             ' get default rHome from user (or overriden in appSettings tag as redirect to global) settings. This can be overruled by individual rexec settings in Rdefinitions
             Try
                 RdotnetInvocation.rHome = ConfigurationManager.AppSettings("rHome")
@@ -231,7 +239,11 @@ Public Module RAddin
             Catch ex As Exception
                 Return "Error in getRDefinitions: " + ex.Message
             End Try
-            If rexec Is Nothing And rPath Is Nothing Then Return "Error in getRDefinitions: neither rexec nor rpath (for Rdotnet) defined"
+#End If
+            If rexec Is Nothing Then Return "Error in getRDefinitions: rexec not defined"
+#If RdotNet Then
+            If rPath Is Nothing Then Return "Error in getRDefinitions: rpath (for Rdotnet) not defined"
+#End If
             If RdefDic("scripts").Count = 0 And RdefDic("scriptrng").Count = 0 Then Return "Error in getRDefinitions: no script(s) or scriptRng(s) defined in " + RdefinitionRange.Name.Name
         Catch ex As Exception
             Return "Error in getRDefinitions: " + ex.Message

@@ -11,13 +11,25 @@ Public Class AddInEvents
     ''' <summary>connect to Excel when opening Addin</summary>
     Public Sub AutoOpen() Implements IExcelAddIn.AutoOpen
         Application = ExcelDnaUtil.Application
+        Dim Wb As Workbook = Application.ActiveWorkbook
+        If Not Wb Is Nothing Then
+            Dim errStr As String = doDefinitions(Wb)
+            RAddin.dropDownSelected = False
+            If errStr = "no RNames" Then
+                RAddin.resetRDefinitions()
+            ElseIf errStr <> vbNullString Then
+                myMsgBox("Error when getting definitions in Workbook_Activate: " + errStr, True)
+            End If
+        End If
         theMenuHandler = New MenuHandler
         Trace.Listeners.Add(New ExcelDna.Logging.LogDisplayTraceListener())
     End Sub
 
     ''' <summary>clean up when Raddin is deactivated</summary>
     Public Sub AutoClose() Implements IExcelAddIn.AutoClose
+#If RdotNet Then
         If RdotnetInvocation.rDotNetEngine IsNot Nothing Then RdotnetInvocation.rDotNetEngine.Dispose()
+#End If
         theMenuHandler = Nothing
         Application = Nothing
     End Sub
@@ -48,8 +60,7 @@ Public Class AddInEvents
 
     ''' <summary>refresh ribbon with current workbook's Rnames</summary>
     Private Sub Workbook_Activate(Wb As Workbook) Handles Application.WorkbookActivate
-        Dim errStr As String
-        errStr = doDefinitions(Wb)
+        Dim errStr As String = doDefinitions(Wb)
         RAddin.dropDownSelected = False
         If errStr = "no RNames" Then
             RAddin.resetRDefinitions()

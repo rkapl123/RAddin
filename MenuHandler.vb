@@ -49,21 +49,24 @@ Public Class MenuHandler
     ''' <summary>toggle shell or Rdotnet mode buttons</summary>
     ''' <param name="pressed"></param>
     Public Sub toggleButton(control As IRibbonControl, pressed As Boolean)
+        If control.Id = "debug" Then
+            RAddin.debugScript = pressed
+            ' invalidate to reflect the change in the togglebuttons image
+            RAddin.theRibbon.InvalidateControl(control.Id)
+            Exit Sub
+        End If
+#If RdotNet Then
         If control.Id = "shell" Then
             runShell = pressed
             runRdotNet = Not pressed
         ElseIf control.Id = "rdotnet" Then
             runRdotNet = pressed
             runShell = Not pressed
-        ElseIf control.Id = "debug" Then
-            RAddin.debugScript = pressed
-            ' invalidate to reflect the change in the togglebuttons image
-            RAddin.theRibbon.InvalidateControl(control.Id)
-            Exit Sub
         End If
         ' for shell/rdotnet toggle always invalidate both controls
         RAddin.theRibbon.InvalidateControl("shell")
         RAddin.theRibbon.InvalidateControl("rdotnet")
+#End If
     End Sub
 
     ''' <summary></summary>
@@ -105,7 +108,11 @@ Public Class MenuHandler
         ' set default run via methods ..
         Try
             runShell = CBool(ConfigurationManager.AppSettings("runShell"))
+#If RdotNet Then
             runRdotNet = CBool(ConfigurationManager.AppSettings("runRdotNet"))
+#Else
+            runRdotNet = False
+#End If
         Catch ex As Exception
             myMsgBox("Error reading default run configuration runShell/runDotNet:" + ex.Message, True)
         End Try

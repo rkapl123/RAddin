@@ -1,4 +1,5 @@
-﻿Imports RDotNet
+﻿#If RdotNet Then
+Imports RDotNet
 Imports RDotNet.NativeLibrary
 Imports Microsoft.Office.Interop.Excel
 Imports RDotNet.Devices
@@ -322,3 +323,4 @@ Public Class DebugDevice
     End Function
 
 End Class
+#End If

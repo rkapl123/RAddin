@@ -9,7 +9,7 @@ Imports System.Runtime.InteropServices
 ' Review the values of the assembly attributes
 
 <Assembly: AssemblyTitle("R Addin")>
-<Assembly: AssemblyDescription("Simple Excel-DNA based Add-in for handling R-scripts from Excel via shell or RdotNet, storing input objects (scalars/vectors/matrices) and retrieving result objects (scalars/vectors/matrices) as text files or RdotNet objects. Graphics are retrieved from produced png files into Excel to be displayed as diagrams.")>
+<Assembly: AssemblyDescription("Simple Excel-DNA based Add-in for handling R-scripts from Excel via shell or RdotNet (if support was compiled), storing input objects (scalars/vectors/matrices) and retrieving result objects (scalars/vectors/matrices) as text files or RdotNet objects. Graphics are retrieved from produced png files into Excel to be displayed as diagrams.")>
 <Assembly: AssemblyCompany("https://rkapl123.github.io/RAddin/")>
 <Assembly: AssemblyProduct("")>
 <Assembly: AssemblyCopyright("Copyright ©  2017, GNU GPL v3.0")>
