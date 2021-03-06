@@ -1,3 +1,3 @@
-SET rpath=\\oebfacoat\dfs\SOFTWARE\TRIT\R\R-3.4.1
-"%rpath%\bin\Rscript.exe" %~dp0\TestScript.R
+SET rpath=C:\Program Files\R\R-4.0.4\bin\x64\
+"%rpath%\Rscript.exe" %~dp0\TestScript.R
 pause

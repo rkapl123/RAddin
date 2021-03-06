@@ -128,7 +128,6 @@ Module RscriptInvocation
                     End If
                 End If
 
-
                 ' absolute paths begin with \\ or X:\ -> dont prefix with currWB path, else currWBpath\scriptRngdir
                 Dim curWbPrefix As String = IIf(Left(scriptRngdir, 2) = "\\" Or Mid(scriptRngdir, 2, 2) = ":\", "", currWb.Path + "\")
                 outputFile = New StreamWriter(curWbPrefix + scriptRngdir + "\" + scriptRngFilename, False, Encoding.Default)
@@ -185,15 +184,28 @@ Module RscriptInvocation
             Dim curWbPrefix As String = IIf(Left(scriptpath, 2) = "\\" Or Mid(scriptpath, 2, 2) = ":\", "", currWb.Path + "\")
             Dim fullScriptPath = curWbPrefix + scriptpath
 
-            Try ' + """"
+            ' debug doesn't work for cmd.exe, only pause is added
+            Dim RinvocationDebug As Boolean = RAddin.debugScript And (LCase(RscriptInvocation.rexec) <> "cmd.exe")
+            Try
                 Directory.SetCurrentDirectory(fullScriptPath)
-                Dim execStr As String = IIf(RAddin.debugScript, "cmd.exe /c """, "") + RscriptInvocation.rexec + " " + RscriptInvocation.rexecArgs + " """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, """ & pause", "")
-                Shell(execStr, AppWinStyle.NormalFocus, True)
-                LogInfo("executed " + execStr)
+                Dim cmd As Process = New Process()
+                Dim args As String = IIf(RinvocationDebug, "/C """"" + RscriptInvocation.rexec + """" + RscriptInvocation.rexecArgs, RscriptInvocation.rexecArgs) + " """ + fullScriptPath + "\" + script + """" + IIf(RAddin.debugScript, " & pause" + IIf(RinvocationDebug, """", ""), "")
+                cmd.StartInfo.FileName = IIf(RinvocationDebug, "cmd.exe", RscriptInvocation.rexec)
+                cmd.StartInfo.Arguments = args
+                cmd.StartInfo.RedirectStandardInput = False
+                cmd.StartInfo.RedirectStandardOutput = False
+                cmd.StartInfo.RedirectStandardError = False
+                cmd.StartInfo.CreateNoWindow = False
+                cmd.StartInfo.UseShellExecute = True
+                cmd.StartInfo.WorkingDirectory = fullScriptPath
+
+                Dim result As Boolean = cmd.Start()
+                cmd.WaitForExit()
+                LogInfo("executed " + fullScriptPath)
             Catch ex As Exception
                 ' reset current dir
                 Directory.SetCurrentDirectory(previousDir)
-                If Not RAddin.myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + rexec + "'" + ex.Message + vbCrLf) Then Return False
+                If Not RAddin.myMsgBox("Error occured when invoking script '" + fullScriptPath + "\" + script + "', using '" + RscriptInvocation.rexec + "'" + ex.Message + vbCrLf) Then Return False
             End Try
         Next
         ' reset current dir

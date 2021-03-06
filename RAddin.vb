@@ -180,12 +180,13 @@ Public Module RAddin
         resetRDefinitions()
         Try
             RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
+            RscriptInvocation.rexec = Nothing ' same for rexec
             For Each defRow As Range In RdefinitionRange.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
                 defval = defRow.Cells(1, 2).Value2
                 deffilepath = defRow.Cells(1, 3).Value2
-                If deftype = "rexec" Then ' setting for shell innvocation
+                If deftype = "rexec" And defval <> vbNullString Then ' setting for shell innvocation
                     RscriptInvocation.rexec = defval
                     RscriptInvocation.rexecArgs = deffilepath
                 ElseIf deftype = "rpath" Then ' setting for RdotNet
