@@ -10,11 +10,12 @@ When running R scripts, following is executed:
 
 ## run via shell
 
-the input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec (see settings), the defined results/diagrams that were written to file are read and placed in Excel.
+The input arguments (arg, see below) are written to files, the scripts defined inside Excel are written and called using the executable located in ExePath/rexec (see settings), the defined results/diagrams that were written to file are read and placed in Excel.
 
 ## run via RdotNet
 
-the input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in rHome/rPath<bitness>, see settings), the defined results that were created in the R instance are passed to and placed in Excel (diagrams are passed via file by now!). This feature is still rather experimental, not everything will work as expected in a production environment.
+The input arguments are passed to a new RdotNet instance, the scripts defined inside Excel or stored on disk are read and called using R Dlls (located in rHome/rPath<bitness>, see settings), the defined results that were created in the R instance are passed to and placed in Excel (diagrams are passed via file by now!). 
+The RdotNet feature is still experimental, not everything will work as expected in a production environment, RdotNet also doesn't work with R versions above 4.0.0.
 
 
 ![Image of screenshot1](https://raw.githubusercontent.com/rkapl123/RAddin/master/docs/screenshot1.png)
@@ -78,6 +79,7 @@ Issues:
 - [x] Implement a faster way to read textfiles into excel (done via querytables/textfiles)
 - [ ] Implement a faster way to save textfiles from excel
 - [ ] Improve RdotNet integration (lists are missing, orientation of vectors, missing diagrams, etc.)
+- [ ] Make RdotNet integration work with R versions above 4.0.0
 
 # Installation of RAddin
 

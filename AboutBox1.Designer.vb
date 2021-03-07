@@ -32,7 +32,6 @@ Partial Class AboutBox1
         Me.LogoPictureBox = New System.Windows.Forms.PictureBox()
         Me.TableLayoutPanel = New System.Windows.Forms.TableLayoutPanel()
         Me.refreshRDef = New System.Windows.Forms.Button()
-        Me.showLog = New System.Windows.Forms.Button()
         CType(Me.LogoPictureBox, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.TableLayoutPanel.SuspendLayout()
         Me.SuspendLayout()
@@ -142,8 +141,7 @@ Partial Class AboutBox1
         Me.TableLayoutPanel.Controls.Add(Me.LabelCompanyName, 1, 3)
         Me.TableLayoutPanel.Controls.Add(Me.TextBoxDescription, 1, 4)
         Me.TableLayoutPanel.Controls.Add(Me.OKButton, 3, 5)
-        Me.TableLayoutPanel.Controls.Add(Me.refreshRDef, 2, 5)
-        Me.TableLayoutPanel.Controls.Add(Me.showLog, 1, 5)
+        Me.TableLayoutPanel.Controls.Add(Me.refreshRDef, 1, 5)
         Me.TableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TableLayoutPanel.Location = New System.Drawing.Point(9, 9)
         Me.TableLayoutPanel.Name = "TableLayoutPanel"
@@ -160,21 +158,12 @@ Partial Class AboutBox1
         'refreshRDef
         '
         Me.refreshRDef.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.refreshRDef.Location = New System.Drawing.Point(203, 248)
+        Me.refreshRDef.Location = New System.Drawing.Point(128, 248)
         Me.refreshRDef.Name = "refreshRDef"
         Me.refreshRDef.Size = New System.Drawing.Size(116, 23)
         Me.refreshRDef.TabIndex = 1
         Me.refreshRDef.Text = "refresh RDefinitions"
         Me.refreshRDef.UseVisualStyleBackColor = True
-        '
-        'showLog
-        '
-        Me.showLog.Location = New System.Drawing.Point(128, 248)
-        Me.showLog.Name = "showLog"
-        Me.showLog.Size = New System.Drawing.Size(69, 23)
-        Me.showLog.TabIndex = 2
-        Me.showLog.Text = "show Log"
-        Me.showLog.UseVisualStyleBackColor = True
         '
         'AboutBox1
         '
@@ -208,5 +197,4 @@ Partial Class AboutBox1
     Friend WithEvents LogoPictureBox As System.Windows.Forms.PictureBox
     Friend WithEvents TableLayoutPanel As System.Windows.Forms.TableLayoutPanel
     Friend WithEvents refreshRDef As System.Windows.Forms.Button
-    Friend WithEvents showLog As Windows.Forms.Button
 End Class

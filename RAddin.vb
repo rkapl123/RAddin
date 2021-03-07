@@ -28,6 +28,8 @@ Public Module RAddin
     Public debugScript As Boolean
     ''' <summary></summary>
     Public dropDownSelected As Boolean
+    ''' <summary></summary>
+    Public WarningIssued As Boolean
 
     ''' <summary>definitions of current R invocation (scripts, args, results, diags...)</summary>
     Public RdefDic As Dictionary(Of String, String()) = New Dictionary(Of String, String())
@@ -79,6 +81,8 @@ Public Module RAddin
         Dim caller As String = theMethod.ReflectedType.FullName & "." & theMethod.Name
 
         Trace.TraceWarning("{0}: {1}", caller, message)
+        WarningIssued = True
+        theRibbon.InvalidateControl("showLog")
         If noAvoidChoice Then
             MsgBox(message, MsgBoxStyle.OkOnly, "R-Addin Message")
             Return False
@@ -181,6 +185,7 @@ Public Module RAddin
         Try
             RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
             RscriptInvocation.rexec = Nothing ' same for rexec
+            RdotnetInvocation.rPath = Nothing
             For Each defRow As Range In RdefinitionRange.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)

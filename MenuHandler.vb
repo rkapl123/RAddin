@@ -127,9 +127,12 @@ Public Class MenuHandler
               "<buttonGroup id='buttonGroup'>" +
               "<toggleButton id='shell' label='run via shell' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='1' screentip='toggles whether to run R script via Shell/Files' supertip='toggles whether to run R script via Shell/Files' />" +
               "<toggleButton id='rdotnet' label='run via RdotNet' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='2' screentip='toggles whether to run R script via RdotNet' supertip='toggles whether to run R script via RdotNet' />" +
-              "</buttonGroup><toggleButton id='debug' label='debug script' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='3' screentip='toggles whether to debug R script' supertip='toggles whether to debug R script (leave cmd shell open)' />" +
-              "" +
-              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='3' screentip='Show Aboutbox (refresh Rdefinitions from current Workbook and show Log from there)'/></dialogBoxLauncher></group>" +
+              "</buttonGroup>" +
+              "<buttonGroup id='buttonGroup2'>" +
+              "<toggleButton id='debug' label='debug script' onAction='toggleButton' getImage='getImage' getPressed='getPressed' tag='3' screentip='toggles whether to debug R script' supertip='toggles whether to debug R script (leave cmd shell open)' />" +
+              "<button id='showLog' label='Log' tag='4' screentip='shows RAddins Diagnostic Display' getImage='getLogsImage' onAction='clickShowLog'/>" +
+              "</buttonGroup>" +
+              "<dialogBoxLauncher><button id='dialog' label='About RAddin' onAction='refreshRdefs' tag='5' screentip='Show Aboutbox (and refresh Rdefinitions from current Workbook from there)'/></dialogBoxLauncher></group>" +
               "<group id='RscriptsGroup' label='Run R-Scripts defined in WB/sheet names'>"
         Dim presetSheetButtonsCount As Integer = Int16.Parse(ConfigurationManager.AppSettings("presetSheetButtonsCount"))
         Dim thesize As String = IIf(presetSheetButtonsCount < 15, "normal", "large")
@@ -142,6 +145,27 @@ Public Class MenuHandler
         customUIXml += "</group></tab></tabs></ribbon></customUI>"
         Return customUIXml
     End Function
+
+    ''' <summary>display warning icon on log button if warning has been logged...</summary>
+    ''' <param name="control"></param>
+    ''' <returns></returns>
+    Public Function getLogsImage(control As IRibbonControl) As String
+        If RAddin.WarningIssued Then
+            Return "IndexUpdate"
+        Else
+            Return "MailMergeStartLetters"
+        End If
+    End Function
+
+    ''' <summary>show the trace log</summary>
+    ''' <param name="control"></param>
+    Public Sub clickShowLog(control As IRibbonControl)
+        ExcelDna.Logging.LogDisplay.Show()
+        ' reset warning flag
+        RAddin.WarningIssued = False
+        theRibbon.InvalidateControl("showLog")
+    End Sub
+
 
     ''' <summary>set the name of the WB/sheet dropdown to the sheet name (for the WB dropdown this is the WB name)</summary>
     ''' <returns></returns>

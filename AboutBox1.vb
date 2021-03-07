@@ -63,8 +63,4 @@ Public NotInheritable Class AboutBox1
         End If
     End Sub
 
-    Private Sub showLog_Click(sender As Object, e As EventArgs) Handles showLog.Click
-        ExcelDna.Logging.LogDisplay.Show()
-    End Sub
-
 End Class
