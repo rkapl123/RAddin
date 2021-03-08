@@ -175,7 +175,7 @@ Public Module RAddin
 #If RdotNet Then
         RdotnetInvocation.rPath = Nothing
 #End If
-        rexec = Nothing : dirglobal = vbNullString
+        RscriptInvocation.rexec = Nothing : dirglobal = vbNullString
     End Sub
 
     ''' <summary>gets definitions from current selected R script invocation range (Rdefinitions)</summary>
@@ -185,7 +185,9 @@ Public Module RAddin
         Try
             RscriptInvocation.rexecArgs = "" ' reset (r)exec arguments as they might have been set elsewhere...
             RscriptInvocation.rexec = Nothing ' same for rexec
+#If RdotNet Then
             RdotnetInvocation.rPath = Nothing
+#End If
             For Each defRow As Range In RdefinitionRange.Rows
                 Dim deftype As String, defval As String, deffilepath As String
                 deftype = LCase(defRow.Cells(1, 1).Value2)
